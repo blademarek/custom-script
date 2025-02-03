@@ -10,13 +10,12 @@
     background-image: url('https://i.imgur.com/20OoeBD.png')
 }
 
-
 #settingsWindow
 {
     height: 511px;
     width: 538px;
     padding: 50px 40px;
-    background-image: url('assets/settings.png');
+    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/settings.png');
     display: block;
     position: absolute;
     left: 375px;
@@ -137,51 +136,51 @@
 }
 
 .quest-type.combat {
-    background-image: url('assets/icon_combat_inactive.jpg')
+    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_combat_inactive.jpg')
 }
 
 .quest-type.combat.active {
-    background-image: url('assets/icon_combat_active.jpg')
+    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_combat_active.jpg')
 }
 
 .quest-type.arena {
-    background-image: url('assets/icon_arena_inactive.jpg')
+    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_arena_inactive.jpg')
 }
 
 .quest-type.arena.active {
-    background-image: url('assets/icon_arena_active.jpg')
+    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_arena_active.jpg')
 }
 
 .quest-type.grouparena {
-    background-image: url('assets/icon_grouparena_inactive.jpg')
+    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_grouparena_inactive.jpg')
 }
 
 .quest-type.grouparena.active {
-    background-image: url('assets/icon_grouparena_active.jpg')
+    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_grouparena_active.jpg')
 }
 
 .quest-type.expedition {
-    background-image: url('assets/icon_expedition_inactive.jpg')
+    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_expedition_inactive.jpg')
 }
 
 .quest-type.expedition.active {
-    background-image: url('assets/icon_expedition_active.jpg')
+    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_expedition_active.jpg')
 }
 
 .quest-type.dungeon {
-    background-image: url('assets/icon_dungeon_inactive.jpg')
+    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_dungeon_inactive.jpg')
 }
 
 .quest-type.dungeon.active {
-    background-image: url('assets/icon_dungeon_active.jpg')
+    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_dungeon_active.jpg')
 }
 
 .quest-type.items {
-    background-image: url('assets/icon_items_inactive.jpg')
+    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_items_inactive.jpg')
 }
 
 .quest-type.items.active {
-    background-image: url('assets/icon_items_active.jpg')
+    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_items_active.jpg')
 }
 
 #overlayBack
