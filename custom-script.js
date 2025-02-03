@@ -8,7 +8,7 @@
 // @grant        GM_addStyle
 // @grant        GM_getResourceText
 // @require      https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js
-// @resource     customCSS_global https://raw.githubusercontent.com/blademarek/custom-script/master/global.css?ver=2.6.4
+// @resource     customCSS_global https://raw.githubusercontent.com/blademarek/custom-script/main/global.css?ver=2.6.4
 // ==/UserScript==
 
 (function() {
