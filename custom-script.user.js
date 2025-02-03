@@ -25,6 +25,8 @@
 
     addCustomCSS()
 
+    const assetsUrl = 'https://raw.githubusercontent.com/blademarek/custom-script/master/assets';
+
     /*****************
      *  Translations  *
      *****************/
@@ -164,7 +166,7 @@
 
     const settingsButton = createButton({
         className: "menuitem py-2 px-4 rounded-md text-white bg-gray-600 hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-opacity-50",
-        innerHTML: `<img src="assets/cog.svg" title="Settings" height="20" width="20" style="filter: invert(83%) sepia(52%) saturate(503%) hue-rotate(85deg) brightness(103%) contrast(101%);" alt="Settings">`,
+        innerHTML: `<img src="${assetsUrl}/cog.svg" title="Settings" height="20" width="20" style="filter: invert(83%) sepia(52%) saturate(503%) hue-rotate(85deg) brightness(103%) contrast(101%);" alt="Settings">`,
         style: "display: flex; justify-content: center; align-items: center; height: 27px; width: 27px; cursor: pointer; border: none; padding: 0; background-image: url('https://i.imgur.com/jf7BXTX.png');",
         onClick: () => {
             openSettings()
