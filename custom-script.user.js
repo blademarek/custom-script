@@ -217,7 +217,7 @@
         return `
             <div class="settings_box">
                 <div class="settingsHeaderBig">${title}</div>
-                <div class="settingsSubcontent">
+                <div class="settingsSubContent">
                     ${['On', 'Off'].map(option => `
                         <div class="settingsButton" data-section="${key}.enabled" data-value="${option}"
                             style="${getOnOffButtonColor(key, option)}">
