@@ -192,10 +192,13 @@
         }).join('')
 
         settingsWindow.innerHTML = `
-        <span id="settingsHeader">${translations.settings}</span>
-        <div id="settingsContent">
+        <div class="settingsHeader">
+            <h1>${translations.settings}</h1>
+        </div>
+        <div class="settingsContent">
             ${settingsContent}
         </div>
+        <div class='settingsFooter'></div>
     `
 
         document.getElementById('header_game').insertBefore(settingsWindow, document.getElementById('header_game').children[0])
