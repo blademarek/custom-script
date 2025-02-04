@@ -12,12 +12,8 @@
 
 #settingsWindow
 {
-    margin-top: 100px;
-    /* padding: 50px 40px; */
-    background-image: url(https://raw.githubusercontent.com/blademarek/custom-script/main/assets/settings.png);
-    display: block;
     position: absolute;
-    top: 300px;
+    top: 300%;
     left: 60%;
     transform: translate(-50%, -50%);
     z-index: 999;
@@ -41,6 +37,14 @@
 {
     cursor: pointer;
     border: 1px solid #612d04;
+}
+
+.slider-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
 }
 
 .settingsHeader
@@ -75,7 +79,8 @@
 
 .settingsHeaderBig
 {
-    margin: 3px 0px;
+    font-size: large;
+    padding-bottom: 5px;
 }
 
 .settingsHeaderSmall
@@ -85,13 +90,12 @@
     margin-top: 6px;
 }
 
-.settingsSubcontent
+.settingsSubContent
 {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin: 3px 0px;
-    padding: 0px 22px;
+    padding: 7px 22px;
 }
 
 .settingsButton

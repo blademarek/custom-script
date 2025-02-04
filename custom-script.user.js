@@ -397,7 +397,7 @@
 
             return `
             <div class="settingsHeaderSmall">${translations[subsectionKey]}</div>
-            <div class="settingsSubcontent">
+            <div class="settingsSubContent">
                 ${contentHTML}
             </div>
         `
