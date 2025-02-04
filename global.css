@@ -12,14 +12,14 @@
 
 #settingsWindow
 {
-    height: 511px;
-    width: 538px;
-    padding: 50px 40px;
-    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/settings.png');
+    margin-top: 100px;
+    /* padding: 50px 40px; */
+    background-image: url(https://raw.githubusercontent.com/blademarek/custom-script/main/assets/settings.png);
     display: block;
     position: absolute;
-    left: 375px;
-    top: 150px;
+    top: 300px;
+    left: 60%;
+    transform: translate(-50%, -50%);
     z-index: 999;
     color: #612d04;
     font: 600 16px Arial;
@@ -46,24 +46,31 @@
 .settingsHeader
 {
     background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/header.png');
-    display: block;
-    padding-top: 20px;
+    height: 129px;
+    width: 618px;
+    background-size: cover;
+    background-repeat: no-repeat;
     letter-spacing: 2px;
+}
+
+.settingsHeader h1 {
+    padding-top: 64px;
 }
 
 .settingsContent
 {
+    padding: 0 35px;
+    row-gap: 30px;
     display: grid;
     background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/body.png');
-    margin-top: 20px;
     grid-template-columns: 50% 50%;
-    grid-template-rows: 180px 130px 130px;
-    width: 100%;
 }
 
 .settingsFooter
 {
     background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/footer.png');
+    height: 75px;
+    background-repeat: no-repeat;
 }
 
 .settingsHeaderBig
@@ -118,6 +125,10 @@
 {
     background: linear-gradient(to bottom, #C3AB6F, #DACFA2);
     cursor: pointer;
+}
+
+.settings_box {
+    row-gap: 10px;
 }
 
 .settings_box.active .settingsButton.active {
