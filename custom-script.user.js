@@ -33,6 +33,7 @@
 
     const translations = {
         advanced: 'Advanced',
+        afterFightSearch: 'Setting',
         arena: 'Arena',
         boss: 'Boss',
         circusTurma: 'Circus Turma',
@@ -58,6 +59,7 @@
         opponentLevel: 'Opponent Level',
         quests: 'Quests',
         random: 'Random',
+        rubyExpedition: '!!! RUBY EXPEDITION !!!',
         settings: 'Settings',
         smelting: 'Smelting',
         smeltingBags: 'Smelting Bags',
@@ -72,7 +74,6 @@
             subsections: [
                 { key: 'opponent', defaultValue: '1' },
                 { key: 'location', defaultValue: 'LAST USED' },
-                { key: 'search', defaultValue: 'None' }
             ]
         },
         dungeons: {
@@ -82,8 +83,18 @@
                 { key: 'location', defaultValue: 'LAST USED' },
                 { key: 'difficulty', defaultValue: 'Normal' },
                 { key: 'fightBoss', defaultValue: 'Yes' },
-                { key: 'search', defaultValue: 'None' },
             ]
+        },
+        search: {
+            enabled: 'false',
+            title: translations.search,
+            subsections: [
+                { key: 'afterFightSearch', defaultValue: 'Thorough' }
+            ]
+        },
+        rubyExpedition: {
+            enabled: 'false',
+            title: translations.rubyExpedition
         },
         arena: {
             enabled: 'false',
@@ -337,8 +348,8 @@
                 `).join('')
                     break
 
-                case 'search':
-                    options = ['None', 'Quick', 'Thorough']
+                case 'afterFightSearch':
+                    options = ['Quick', 'Thorough']
                     contentHTML = options.map(option => `
                     <div id="set_${subsectionKey}_${option}" data-section="${key}.${subsectionKey}" data-value="${option}" class="settingsButton"
                         style="${getButtonStyle(key+'.'+subsectionKey, option)}">
@@ -372,7 +383,7 @@
                 case 'healingPercentage':
                     contentHTML = `
                     <div class="slider-container">
-                        <input type="range" id="healingPercentageSlider" min="1" max="100" value="${settingsValue}" class="slider settingsButton" 
+                        <input type="range" id="healingPercentageSlider" min="1" max="100" value="${settingsValue}" class="slider settingsSlider" 
                             data-section="${key}.${subsectionKey}">
                         <span>${settingsValue}%</span>
                     </div>
@@ -545,10 +556,22 @@
         // TODO check other popup windows like the cubes game
         await enqueueClick('#blackoutDialogLoginBonus')
         await enqueueClick('#blackoutDialognotification')
+        await afterFightSearch()
 
-        // await checkQuests()
-        // await checkExpeditions()
-        // await checkDungeons()
+        await checkQuests()
+        await checkExpeditions()
+        await checkDungeons()
+        await checkArena()
+        await checkCircusTurma()
+    }
+
+    async function afterFightSearch() {
+        const enabled = JSON.parse(getSettingValue('search.enabled'))
+        const searchSetting = getSettingValue('search.afterFightSearch')
+
+        const position = enabled ? 1 : { 'Quick': 2, 'Thorough': 3 }[searchSetting]
+
+        await enqueueClick(`#blackoutDialog button:nth-of-type(${position})`)
     }
 
     async function checkQuests() {
@@ -632,9 +655,7 @@
             await fightDungeon()
         } else {
             if (document.body.id === 'locationPage') {
-                const currentIndex = Array.from(document.querySelectorAll('.awesome-tabs')).findIndex(tab => tab.classList.contains('current'))
-
-                if (currentIndex === 0) {
+                if (getCurrentTabIndex() === 0) {
                     await enqueueClick('.awesome-tabs', 1)
                 }
             } else {
@@ -674,6 +695,85 @@
         }
     }
 
+    async function checkArena() {
+        if (!JSON.parse(getSettingValue('arena.enabled'))) {
+            return
+        }
+
+        // TODO add health check
+        const arenaCooldown = document.querySelector('#cooldown_bar_arena .cooldown_bar_fill_progress')
+
+        if (arenaCooldown) {
+            return
+        }
+
+        if (document.body.id === 'arenaPage') {
+            if (getCurrentTabIndex() !== 1) {
+                await enqueueClick('.awesome-tabs', 1)
+            }
+
+            await fightBySetting(getSettingValue('arena.opponentLevel'), 'own2')
+        } else {
+            await enqueueClick('#cooldown_bar_arena a.cooldown_bar_link')
+        }
+    }
+
+    async function checkCircusTurma() {
+        if (!JSON.parse(getSettingValue('circusTurma.enabled'))) {
+            return
+        }
+
+        // TODO add health check
+        const circusTurmaCooldown = document.querySelector('#cooldown_bar_ct .cooldown_bar_fill_progress')
+
+        if (circusTurmaCooldown) {
+            return
+        }
+
+        if (document.body.id === 'arenaPage') {
+            if (getCurrentTabIndex() !== 3) {
+                await enqueueClick('.awesome-tabs', 3)
+            }
+
+            await fightBySetting(getSettingValue('circusTurma.opponentLevel'), 'own3')
+        } else {
+            await enqueueClick('#cooldown_bar_ct a.cooldown_bar_link')
+        }
+    }
+
+    function fightBySetting(opponentLevelSetting, tableId) {
+        const rows = Array.from(document.querySelectorAll(`#${tableId} tbody tr`))
+            .map(row => {
+                const levelCell = row.querySelector('td:nth-of-type(2)')
+                const level = levelCell ? parseInt(levelCell.textContent.trim()) : null
+
+                return { row, level }
+            })
+            .filter(r => r.level !== null)
+
+        let selectedRows
+
+        if (opponentLevelSetting === 'Lowest') {
+            const minLevel = Math.min(...rows.map(r => r.level))
+            selectedRows = rows.filter(r => r.level === minLevel)
+        } else if (opponentLevelSetting === 'Highest') {
+            const maxLevel = Math.max(...rows.map(r => r.level))
+            selectedRows = rows.filter(r => r.level === maxLevel)
+        } else if (opponentLevelSetting === 'Random') {
+            selectedRows = [rows[Math.floor(Math.random() * rows.length)]]
+        }
+
+        if (selectedRows.length) {
+            const chosenRow = selectedRows[Math.floor(Math.random() * selectedRows.length)]
+            chosenRow.row.querySelector('.attack').click()
+        }
+    }
+
+
+    function getCurrentTabIndex() {
+        return Array.from(document.querySelectorAll('.awesome-tabs')).findIndex(tab => tab.classList.contains('current'))
+    }
+
     async function goToPage(pageName) {
         let menuIndex = null
 
@@ -689,7 +789,7 @@
     }
 
     document.addEventListener('click', function (event) {
-        if (event.target.classList.contains('settingsButton') && !event.target.classList.contains('settingsSelect')) {
+        if ((event.target.classList.contains('settingsButton') || event.target.classList.contains('settingsSlider')) && !event.target.classList.contains('settingsSelect')) {
             const sectionKey = event.target.getAttribute('data-section')
             const selectedValue = event.target.getAttribute('data-value')
 
