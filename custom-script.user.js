@@ -559,6 +559,9 @@
         await afterFightSearch()
 
         // TODO fix queue
+        await checkHealing()
+
+
         await checkQuests()
         await checkExpeditions()
         await checkDungeons()
@@ -776,6 +779,115 @@
         }
     }
 
+    async function checkHealing() {
+        if (!JSON.parse(getSettingValue('healing.enabled'))) {
+            return
+        }
+
+        const percentage = parseInt(document.querySelector('#header_values_hp_percent').textContent.trim(), 10)
+        const percentageSetting = parseInt(getSettingValue('healing.healingPercentage'), 10)
+        const healingBags = JSON.parse(getSettingValue('healing.healingBags'))
+
+        if (percentage < 100 && percentage <= percentageSetting && healingBags.length > 0) {
+            if (document.body.id === 'overviewPage') {
+                const mainNavTabIndex = getCurrentTabIndex()
+
+                if (mainNavTabIndex !== 0) {
+                    await enqueueClick('.awesome-tabs', 0)
+                }
+                const inventoryTabs = Array.from(document.querySelectorAll('.inventoryBox .awesome-tabs'));
+                const currentInventoryTab = document.querySelector('.inventoryBox .awesome-tabs.current');
+                const currentInventoryTabIndex = inventoryTabs.indexOf(currentInventoryTab) + 1;
+
+                if (!healingBags.includes(currentInventoryTabIndex.toString())) {
+                    await enqueueClick(inventoryTabs[parseInt(healingBags[0]) - 1])
+                } else {
+                    await healUp()
+                }
+            } else {
+                await goToPage('overview')
+            }
+        }
+    }
+
+    async function healUp() {
+        const food = Array.from(document.querySelectorAll('#inv div'))
+            .map(div => ({
+                vitality: parseInt(div.getAttribute('data-vitality'), 10),
+                element: div
+            }));
+
+        const hpBarElement = document.querySelector('#header_values_hp_bar');
+
+        const currentHealth = hpBarElement ? parseInt(hpBarElement.getAttribute('data-value'), 10) : 0;
+        const maxHealth = hpBarElement ? parseInt(hpBarElement.getAttribute('data-max-value'), 10) : 0;
+        const overshotLimit = maxHealth - currentHealth;
+        const allowedOvershot = overshotLimit * 0.1;
+
+        const validFoods = food.filter(item => item.vitality <= overshotLimit + allowedOvershot);
+
+        let bestFood = validFoods.reduce((closest, item) => {
+            const diff = Math.abs(item.vitality - (overshotLimit + allowedOvershot));
+            const closestDiff = Math.abs(closest.vitality - (overshotLimit + allowedOvershot));
+
+            if (diff < closestDiff || closest.vitality === 0) {
+                return item;
+            }
+            return closest;
+        }, { vitality: 0 });
+
+        if (!bestFood.vitality) {
+            bestFood = food.reduce((closest, item) => {
+                if (item.vitality <= maxHealth - currentHealth && item.vitality > closest.vitality) {
+                    return item;
+                }
+                return closest;
+            }, { vitality: 0 });
+        }
+
+        if (bestFood.vitality) {
+            const targetElement = document.querySelector('.ui-droppable');
+
+            if (targetElement) {
+                const targetSpot = {
+                    x: targetElement.getBoundingClientRect().left + targetElement.offsetWidth / 2,
+                    y: targetElement.getBoundingClientRect().top + targetElement.offsetHeight / 2
+                };
+
+                simulateDrag(bestFood.element, targetElement, targetSpot.x, targetSpot.y);
+            }
+        }
+    }
+
+    function simulateDrag(item, targetElement, x, y) {
+        const cords_item = item.getBoundingClientRect();
+        const cords_target = { x: x, y: y };
+
+        const mouseDownEvent = new MouseEvent('mousedown', {
+            clientX: cords_item.left + window.scrollX,
+            clientY: cords_item.top + window.scrollY,
+            bubbles: true,
+            cancelable: true
+        });
+
+        const mouseMoveEvent = new MouseEvent('mousemove', {
+            clientX: cords_target.x + window.scrollX,
+            clientY: cords_target.y + window.scrollY,
+            bubbles: true,
+            cancelable: true
+        });
+
+        const mouseUpEvent = new MouseEvent('mouseup', {
+            clientX: cords_target.x + window.scrollX,
+            clientY: cords_target.y + window.scrollY,
+            bubbles: true,
+            cancelable: true
+        });
+
+        item.dispatchEvent(mouseDownEvent);
+        targetElement.dispatchEvent(mouseMoveEvent);
+        targetElement.dispatchEvent(mouseUpEvent);
+    }
 
     function getCurrentTabIndex() {
         return Array.from(document.querySelectorAll('.awesome-tabs')).findIndex(tab => tab.classList.contains('current'))
@@ -788,9 +900,12 @@
             case 'pantheon':
                 menuIndex = 1
             break
+            case 'overview':
+                menuIndex = 0
+            break
         }
 
-        if (menuIndex) {
+        if (menuIndex !== null) {
             await enqueueClick(".advanced_menu_link, .advanced_menu_link_active", menuIndex)
         }
     }
