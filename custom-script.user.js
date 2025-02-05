@@ -558,6 +558,7 @@
         await enqueueClick('#blackoutDialognotification')
         await afterFightSearch()
 
+        // TODO fix queue
         await checkQuests()
         await checkExpeditions()
         await checkDungeons()
@@ -583,14 +584,20 @@
             await enqueueClick('.quest_slot_button_restart')
             await enqueueClick('.quest_slot_button_finish')
 
-            let selector = JSON.parse(getSettingValue('quests.questType')).map(category => `#qcategory_${category} .quest_slot_button_accept`).join(', ')
-            let questCooldown = document.querySelectorAll('#quest_header_cooldown')
+            let questTypes = JSON.parse(getSettingValue('quests.questType'))
+            let selector = questTypes.length
+                ? questTypes.map(category => `#qcategory_${category} .quest_slot_button_accept`).join(', ')
+                : null
 
-            if (!questCooldown.length && !(await enqueueClick(selector))) {
-                await enqueueClick('#quest_footer_reroll')
+            if (selector) {
+                let questCooldown = document.querySelectorAll('#quest_header_cooldown')
+
+                if (!questCooldown.length && !(await enqueueClick(selector))) {
+                    await enqueueClick('#quest_footer_reroll')
+                }
+
+                // TODO store next quest time
             }
-
-            // TODO store next quest time
         } else {
             await goToPage('pantheon')
         }
