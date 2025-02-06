@@ -522,7 +522,7 @@
 
     async function clickElement(selector, elementIndex = 0) {
         return new Promise((resolve) => {
-            // const delay = getRandomInt(1000, 5000)
+            // const delay = getRandomInt(1000, 2000)
             const delay = getRandomInt(1)
             let elements
 
@@ -554,19 +554,19 @@
 
     async function runAddon() {
         // TODO check other popup windows like the cubes game
-        await enqueueClick('#blackoutDialogLoginBonus')
-        await enqueueClick('#blackoutDialognotification')
-        await afterFightSearch()
+        // await enqueueClick('#blackoutDialogLoginBonus')
+        // await enqueueClick('#blackoutDialognotification')
+        // await afterFightSearch()
 
         // TODO fix queue
         await checkHealing()
 
 
-        await checkQuests()
-        await checkExpeditions()
-        await checkDungeons()
-        await checkArena()
-        await checkCircusTurma()
+        // await checkQuests()
+        // await checkExpeditions()
+        // await checkDungeons()
+        // await checkArena()
+        // await checkCircusTurma()
     }
 
     async function afterFightSearch() {
@@ -784,39 +784,65 @@
             return
         }
 
-        const percentage = parseInt(document.querySelector('#header_values_hp_percent').textContent.trim(), 10)
+        if (document.body.id !== 'overviewPage') {
+            await goToPage('overview')
+        }
+
+        const mainNavTabIndex = getCurrentTabIndex()
+
+        if (mainNavTabIndex !== 0) {
+            await enqueueClick('.awesome-tabs', 0)
+        }
+
         const percentageSetting = parseInt(getSettingValue('healing.healingPercentage'), 10)
         const healingBags = JSON.parse(getSettingValue('healing.healingBags'))
 
-        if (percentage < 100 && percentage <= percentageSetting && healingBags.length > 0) {
-            if (document.body.id === 'overviewPage') {
-                const mainNavTabIndex = getCurrentTabIndex()
+        while (true) {
+            const percentage = parseInt(document.querySelector('#header_values_hp_percent').textContent.trim(), 10)
 
-                if (mainNavTabIndex !== 0) {
-                    await enqueueClick('.awesome-tabs', 0)
-                }
-                const inventoryTabs = Array.from(document.querySelectorAll('.inventoryBox .awesome-tabs'));
-                const currentInventoryTab = document.querySelector('.inventoryBox .awesome-tabs.current');
-                const currentInventoryTabIndex = inventoryTabs.indexOf(currentInventoryTab) + 1;
-
-                if (!healingBags.includes(currentInventoryTabIndex.toString())) {
-                    await enqueueClick(inventoryTabs[parseInt(healingBags[0]) - 1])
-                } else {
-                    await healUp()
-                }
-            } else {
-                await goToPage('overview')
+            if (percentage >= percentageSetting) {
+                break
             }
+
+            await checkFoodInBags(healingBags)
         }
     }
 
+    async function checkFoodInBags(healingBags) {
+        const inventoryTabs = Array.from(document.querySelectorAll('.inventoryBox .awesome-tabs'));
+
+        for (const tabIndex of healingBags) {
+            await enqueueClick(inventoryTabs[parseInt(tabIndex) - 1]);
+
+            const hasFood = await healUp();
+
+            if (hasFood) {
+                return;
+            }
+        }
+
+        // TODO maybe info that no food was found
+    }
+
     async function healUp() {
-        const food = Array.from(document.querySelectorAll('#inv div'))
+        // TODO remove the promise after turning on default click timeout - default click promise 1s should be enough
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        const food = Array.from(document.querySelectorAll('#inv div[data-vitality]'))
             .map(div => ({
                 vitality: parseInt(div.getAttribute('data-vitality'), 10),
                 element: div
-            }));
+            }))
+            .filter(item => !isNaN(item.vitality));
 
+        if (!food.length) {
+            return false;
+        } else {
+            await calculateBestFood(food);
+        }
+    }
+
+    async function calculateBestFood(food) {
         const hpBarElement = document.querySelector('#header_values_hp_bar');
 
         const currentHealth = hpBarElement ? parseInt(hpBarElement.getAttribute('data-value'), 10) : 0;
@@ -849,12 +875,8 @@
             const targetElement = document.querySelector('.ui-droppable');
 
             if (targetElement) {
-                const targetSpot = {
-                    x: targetElement.getBoundingClientRect().left + targetElement.offsetWidth / 2,
-                    y: targetElement.getBoundingClientRect().top + targetElement.offsetHeight / 2
-                };
-
-                simulateDrag(bestFood.element, targetElement, targetSpot.x, targetSpot.y);
+                console.log('healing', bestFood.element, targetElement)
+                simulateDrag(bestFood.element, targetElement, targetElement.getBoundingClientRect().left + targetElement.offsetWidth / 2, targetElement.getBoundingClientRect().top + targetElement.offsetHeight / 2);
             }
         }
     }
