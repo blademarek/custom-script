@@ -784,40 +784,53 @@
             return
         }
 
+        const percentageSetting = parseInt(getSettingValue('healing.healingPercentage'), 10)
+        const percentage = parseInt(document.querySelector('#header_values_hp_percent').textContent.trim(), 10)
+
+        if (percentage >= percentageSetting) {
+            return
+        }
+
         if (document.body.id !== 'overviewPage') {
             await goToPage('overview')
+        } else {
+            if (getCurrentTabIndex() !== 0) {
+                await enqueueClick('.awesome-tabs', 0)
+            }
         }
-
-        const mainNavTabIndex = getCurrentTabIndex()
-
-        if (mainNavTabIndex !== 0) {
-            await enqueueClick('.awesome-tabs', 0)
-        }
-
-        const percentageSetting = parseInt(getSettingValue('healing.healingPercentage'), 10)
-        const healingBags = JSON.parse(getSettingValue('healing.healingBags'))
 
         while (true) {
-            const percentage = parseInt(document.querySelector('#header_values_hp_percent').textContent.trim(), 10)
-
-            if (percentage >= percentageSetting) {
+            const hpMax = document.querySelector('#header_values_hp_bar_fill')
+            if (percentage >= percentageSetting || hpMax.style.overflow !== 'hidden') {
                 break
             }
 
-            await checkFoodInBags(healingBags)
+            await checkFoodInBags()
         }
     }
 
-    async function checkFoodInBags(healingBags) {
+    async function checkFoodInBags() {
+        const healingBags = JSON.parse(getSettingValue('healing.healingBags'))
+
         const inventoryTabs = Array.from(document.querySelectorAll('.inventoryBox .awesome-tabs'));
 
         for (const tabIndex of healingBags) {
             await enqueueClick(inventoryTabs[parseInt(tabIndex) - 1]);
 
-            const hasFood = await healUp();
+            let healingDone = false;
 
-            if (hasFood) {
-                return;
+            while (!healingDone) {
+                const hpMax = document.querySelector('#header_values_hp_bar_fill')
+
+                if (hpMax.style.overflow !== 'hidden') {
+                    healingDone = true;
+                }
+
+                if (healingDone) {
+                    return
+                }
+
+                await healUp();
             }
         }
 
@@ -853,30 +866,27 @@
         const validFoods = food.filter(item => item.vitality <= overshotLimit + allowedOvershot);
 
         let bestFood = validFoods.reduce((closest, item) => {
-            const diff = Math.abs(item.vitality - (overshotLimit + allowedOvershot));
-            const closestDiff = Math.abs(closest.vitality - (overshotLimit + allowedOvershot));
+            const diff = Math.abs(item.vitality - (overshotLimit + allowedOvershot))
+            const closestDiff = Math.abs(closest.vitality - (overshotLimit + allowedOvershot))
 
             if (diff < closestDiff || closest.vitality === 0) {
-                return item;
+                return item
             }
-            return closest;
-        }, { vitality: 0 });
+            return closest
+        }, { vitality: 0 })
 
         if (!bestFood.vitality) {
-            bestFood = food.reduce((closest, item) => {
-                if (item.vitality <= maxHealth - currentHealth && item.vitality > closest.vitality) {
-                    return item;
-                }
-                return closest;
-            }, { vitality: 0 });
+            bestFood = food.reduce((smallest, item) => {
+                return smallest.vitality === 0 || item.vitality < smallest.vitality ? item : smallest
+            }, { vitality: 0 })
         }
 
         if (bestFood.vitality) {
             const targetElement = document.querySelector('.ui-droppable');
 
             if (targetElement) {
-                console.log('healing', bestFood.element, targetElement)
                 simulateDrag(bestFood.element, targetElement, targetElement.getBoundingClientRect().left + targetElement.offsetWidth / 2, targetElement.getBoundingClientRect().top + targetElement.offsetHeight / 2);
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
         }
     }
