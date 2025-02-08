@@ -125,6 +125,13 @@
     text-align: center;
 }
 
+.settingsInput
+{
+    width: 50px;
+    display: block;
+    margin: 0 auto
+}
+
 .settingsButton:hover
 {
     background: linear-gradient(to bottom, #C3AB6F, #DACFA2);

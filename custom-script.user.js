@@ -60,6 +60,7 @@
         quests: 'Quests',
         random: 'Random',
         rubyExpedition: '!!! RUBY EXPEDITION !!!',
+        rubyUsage: 'Ruby Usage',
         settings: 'Settings',
         smelting: 'Smelting',
         smeltingBags: 'Smelting Bags',
@@ -94,7 +95,10 @@
         },
         rubyExpedition: {
             enabled: 'false',
-            title: translations.rubyExpedition
+            title: translations.rubyExpedition,
+            subsections: [
+                { key: 'rubyUsage', defaultValue: '0' }
+            ]
         },
         arena: {
             enabled: 'false',
@@ -358,6 +362,15 @@
                 `).join('')
                     break
 
+                case 'rubyUsage':
+                    const value = parseInt(getSettingValue('rubyExpedition.rubyUsage'))
+
+                    contentHTML = `
+                    <input type="number" id="set_${subsectionKey}" data-section="${key}.${subsectionKey}" class="settingsInput" 
+                        value="${value}" min="0">
+                    `
+                    break
+
                 case 'opponentLevel':
                     options = ['Lowest', 'Highest', 'Random']
                     contentHTML = options.map(option => `
@@ -529,10 +542,10 @@
             if (selector instanceof Element) {
                 elements = [selector]
             } else {
-                elements = document.querySelectorAll(selector);
+                elements = document.querySelectorAll(selector)
             }
 
-            const elementToClick = elements[elementIndex] || elements[0];
+            const elementToClick = elements[elementIndex] || elements[0]
 
             if (elementToClick) {
                 setTimeout(() => {
@@ -559,7 +572,7 @@
         // await afterFightSearch()
 
         // TODO fix queue
-        await checkHealing()
+        // await checkHealing()
 
 
         // await checkQuests()
@@ -567,6 +580,7 @@
         // await checkDungeons()
         // await checkArena()
         // await checkCircusTurma()
+        await checkSmelting()
     }
 
     async function afterFightSearch() {
@@ -611,7 +625,7 @@
             return
         }
 
-        // TODO add health check
+        await checkHealing()
         // TODO add ruby usage
 
         const expeditionCooldown = document.querySelector('#cooldown_bar_expedition .cooldown_bar_fill_progress')
@@ -629,6 +643,7 @@
             if (location === 'LAST USED') {
                 await enqueueClick('#cooldown_bar_expedition a.cooldown_bar_link')
             } else {
+                // TODO info if location is not found
                 const selector = Array.from(document.querySelectorAll('#submenu2 a.menuitem'))
                     .find(a => a.textContent.trim() === location)
 
@@ -652,7 +667,8 @@
             return
         }
 
-        // TODO add health check
+        await checkHealing()
+
         const dungeonCooldown = document.querySelector('#cooldown_bar_dungeon .cooldown_bar_fill_progress')
 
         if (dungeonCooldown) {
@@ -672,6 +688,7 @@
                 if (location === 'LAST USED') {
                     await enqueueClick('#cooldown_bar_dungeon a.cooldown_bar_link')
                 } else {
+                    // TODO info if location is not found
                     const selector = Array.from(document.querySelectorAll('#submenu2 a.menuitem'))
                         .find(a => a.textContent.trim() === location)
 
@@ -710,7 +727,8 @@
             return
         }
 
-        // TODO add health check
+        await checkHealing()
+
         const arenaCooldown = document.querySelector('#cooldown_bar_arena .cooldown_bar_fill_progress')
 
         if (arenaCooldown) {
@@ -733,7 +751,8 @@
             return
         }
 
-        // TODO add health check
+        await checkHealing()
+
         const circusTurmaCooldown = document.querySelector('#cooldown_bar_ct .cooldown_bar_fill_progress')
 
         if (circusTurmaCooldown) {
@@ -780,7 +799,8 @@
     }
 
     async function checkHealing() {
-        if (!JSON.parse(getSettingValue('healing.enabled'))) {
+        if (!JSON.parse(getSettingValue('healing.enabled')) || !JSON.parse(getSettingValue('healing.healingBags')).length) {
+            // show info about low hp and stop
             return
         }
 
@@ -811,59 +831,67 @@
 
     async function checkFoodInBags() {
         const healingBags = JSON.parse(getSettingValue('healing.healingBags'))
-
-        const inventoryTabs = Array.from(document.querySelectorAll('.inventoryBox .awesome-tabs'));
+        const inventoryTabs = Array.from(document.querySelectorAll('.inventoryBox .awesome-tabs'))
+        let food = true
 
         for (const tabIndex of healingBags) {
-            await enqueueClick(inventoryTabs[parseInt(tabIndex) - 1]);
+            await enqueueClick(inventoryTabs[parseInt(tabIndex) - 1])
 
-            let healingDone = false;
+            let healingDone = false
 
             while (!healingDone) {
                 const hpMax = document.querySelector('#header_values_hp_bar_fill')
 
                 if (hpMax.style.overflow !== 'hidden') {
-                    healingDone = true;
+                    healingDone = true
                 }
 
                 if (healingDone) {
                     return
                 }
 
-                await healUp();
+                food = await healUp()
+
+                if (!food) {
+                    // TODO check if it works for no food
+                    break
+                }
+            }
+
+            if (!food) {
+                // TODO add info no food found, check functionality if it works
+                break
             }
         }
-
-        // TODO maybe info that no food was found
     }
 
     async function healUp() {
         // TODO remove the promise after turning on default click timeout - default click promise 1s should be enough
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise(resolve => setTimeout(resolve, 1000))
 
         const food = Array.from(document.querySelectorAll('#inv div[data-vitality]'))
             .map(div => ({
                 vitality: parseInt(div.getAttribute('data-vitality'), 10),
                 element: div
             }))
-            .filter(item => !isNaN(item.vitality));
+            .filter(item => !isNaN(item.vitality))
 
         if (!food.length) {
-            return false;
+            return false
         } else {
-            await calculateBestFood(food);
+            await calculateBestFood(food)
         }
     }
 
     async function calculateBestFood(food) {
-        const hpBarElement = document.querySelector('#header_values_hp_bar');
+        const hpBarElement = document.querySelector('#header_values_hp_bar')
 
-        const currentHealth = hpBarElement ? parseInt(hpBarElement.getAttribute('data-value'), 10) : 0;
-        const maxHealth = hpBarElement ? parseInt(hpBarElement.getAttribute('data-max-value'), 10) : 0;
-        const overshotLimit = maxHealth - currentHealth;
-        const allowedOvershot = overshotLimit * 0.1;
+        const currentHealth = hpBarElement ? parseInt(hpBarElement.getAttribute('data-value'), 10) : 0
+        const maxHealth = hpBarElement ? parseInt(hpBarElement.getAttribute('data-max-value'), 10) : 0
+        const overshotLimit = maxHealth - currentHealth
+        const allowedOvershot = overshotLimit * 0.1
 
-        const validFoods = food.filter(item => item.vitality <= overshotLimit + allowedOvershot);
+        const validFoods = food.filter(item => item.vitality <= overshotLimit + allowedOvershot)
 
         let bestFood = validFoods.reduce((closest, item) => {
             const diff = Math.abs(item.vitality - (overshotLimit + allowedOvershot))
@@ -882,43 +910,129 @@
         }
 
         if (bestFood.vitality) {
-            const targetElement = document.querySelector('.ui-droppable');
+            const targetElement = document.querySelector('.ui-droppable')
 
             if (targetElement) {
-                simulateDrag(bestFood.element, targetElement, targetElement.getBoundingClientRect().left + targetElement.offsetWidth / 2, targetElement.getBoundingClientRect().top + targetElement.offsetHeight / 2);
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                simulateDrag(bestFood.element, targetElement, targetElement.getBoundingClientRect().left + targetElement.offsetWidth / 2, targetElement.getBoundingClientRect().top + targetElement.offsetHeight / 2)
+                await new Promise(resolve => setTimeout(resolve, 1000))
             }
         }
     }
 
+    async function checkSmelting() {
+        if (!JSON.parse(getSettingValue('smelting.enabled')) || !JSON.parse(getSettingValue('smelting.smeltingBags')).length) {
+            return
+        }
+
+        const nextForgeFinished = localStorage.getItem('nextForgeFinished')
+
+        if (nextForgeFinished && new Date(nextForgeFinished) > new Date()) {
+            return
+        }
+
+        if (document.body.id === 'forgePage') {
+            await smeltItems()
+        } else {
+            await enqueueClick(Array.from(document.querySelectorAll('#submenu1 a.menuitem')).find(a => a.href.includes('smeltery')))
+        }
+    }
+
+    async function smeltItems() {
+        const smeltTabs = Array.from(document.querySelectorAll('#forge_nav div'))
+        let smeltItemsFound = true
+        let forgeFinishTimes = []
+
+        for (const smeltTabIndex of smeltTabs.keys()) {
+            await enqueueClick(smeltTabs[smeltTabIndex])
+
+            if (smeltTabs[smeltTabIndex].classList.contains('forge_crafting')) {
+                await new Promise(resolve => setTimeout(resolve, 2000))
+                const taskFinishedTime = calculateTaskFinishedTime(document.querySelector('#forge_time_remaining').textContent.trim())
+                forgeFinishTimes.push(taskFinishedTime)
+
+                continue
+            }
+
+            if (smeltTabs[smeltTabIndex].classList.contains('forge_finished-succeeded')) {
+                await enqueueClick('#forge_horreum')
+            }
+
+            if (smeltItemsFound) {
+                smeltItemsFound = await smeltItem()
+            }
+        }
+
+        const closestFinishTime = forgeFinishTimes.reduce((closest, currentTime) => {
+            const currentDiff = Math.abs(currentTime - new Date())
+            const closestDiff = Math.abs(closest - new Date())
+            return currentDiff < closestDiff ? currentTime : closest
+        }, forgeFinishTimes[0])
+
+        localStorage.setItem('nextForgeFinished', closestFinishTime.toISOString())
+    }
+
+    async function smeltItem() {
+        const smeltPlace = document.querySelector('#forge_box #itembox')
+        const smeltBags = JSON.parse(getSettingValue('smelting.smeltingBags'))
+        const inventoryTabs = Array.from(document.querySelectorAll('.inventoryBox .awesome-tabs'))
+
+        for (const tabIndex of smeltBags) {
+            await enqueueClick(inventoryTabs[parseInt(tabIndex) - 1])
+
+            const smeltItems = Array.from(document.querySelectorAll('#inv div'))
+                .filter(div => ['1', '2', '4', '8', '48', '256', '512', '1024'].includes(div.getAttribute('data-content-type')))
+
+            if (smeltItems.length) {
+                // TODO probably remove this after the enqueueclick random interval is set
+                await new Promise(resolve => setTimeout(resolve, 1000))
+                simulateDrag(smeltItems[0], smeltPlace, smeltPlace.getBoundingClientRect().left + smeltPlace.offsetWidth / 2, smeltPlace.getBoundingClientRect().top + smeltPlace.offsetHeight / 2)
+                await new Promise(resolve => setTimeout(resolve, 1000))
+                await enqueueClick(document.querySelector('#rent .awesome-button[data-rent="2"]'))
+                return true
+            }
+        }
+
+        return false
+    }
+
     function simulateDrag(item, targetElement, x, y) {
-        const cords_item = item.getBoundingClientRect();
-        const cords_target = { x: x, y: y };
+        const cords_item = item.getBoundingClientRect()
+        const cords_target = { x: x, y: y }
 
         const mouseDownEvent = new MouseEvent('mousedown', {
             clientX: cords_item.left + window.scrollX,
             clientY: cords_item.top + window.scrollY,
             bubbles: true,
             cancelable: true
-        });
+        })
 
         const mouseMoveEvent = new MouseEvent('mousemove', {
             clientX: cords_target.x + window.scrollX,
             clientY: cords_target.y + window.scrollY,
             bubbles: true,
             cancelable: true
-        });
+        })
 
         const mouseUpEvent = new MouseEvent('mouseup', {
             clientX: cords_target.x + window.scrollX,
             clientY: cords_target.y + window.scrollY,
             bubbles: true,
             cancelable: true
-        });
+        })
 
-        item.dispatchEvent(mouseDownEvent);
-        targetElement.dispatchEvent(mouseMoveEvent);
-        targetElement.dispatchEvent(mouseUpEvent);
+        item.dispatchEvent(mouseDownEvent)
+        targetElement.dispatchEvent(mouseMoveEvent)
+        targetElement.dispatchEvent(mouseUpEvent)
+    }
+
+    function calculateTaskFinishedTime(timeRemaining) {
+        const [hours, minutes, seconds] = timeRemaining.split(':').map(Number)
+
+        const totalTimeInSeconds = (hours * 3600) + (minutes * 60) + seconds
+        const taskFinishedTime = new Date()
+        taskFinishedTime.setSeconds(taskFinishedTime.getSeconds() + totalTimeInSeconds)
+
+        return taskFinishedTime
     }
 
     function getCurrentTabIndex() {
@@ -981,8 +1095,17 @@
         }
     })
 
+    document.addEventListener('input', event => {
+        if (event.target.classList.contains(`settingsButton`)) {
+            let newValue = parseInt(event.target.value) || 0
+            if (newValue < 0) newValue = 0
+            event.target.value = newValue
+            localStorage.setItem(event.target.getAttribute('data-section'), newValue.toString())
+        }
+    })
+
     document.addEventListener('change', function (event) {
-        if (event.target.classList.contains('settingsSelect')) {
+        if (event.target.classList.contains('settingsInput')) {
             const sectionKey = event.target.getAttribute('data-section')
             const selectedValue = event.target.value
 
