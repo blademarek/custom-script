@@ -366,7 +366,7 @@
                     const value = parseInt(getSettingValue('rubyExpedition.rubyUsage'))
 
                     contentHTML = `
-                    <input type="number" id="set_${subsectionKey}" data-section="${key}.${subsectionKey}" class="settingsInput" 
+                    <input type="number" id="set_${subsectionKey}" data-section="${key}.${subsectionKey}" class="settingsInput settingsButton" 
                         value="${value}" min="0">
                     `
                     break
