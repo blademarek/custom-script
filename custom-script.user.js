@@ -880,7 +880,11 @@
     }
 
     async function checkHealing() {
-        if (!canHeal() && isLowHp()) {
+        if (!isLowHp()) {
+            return true
+        }
+
+        if (!canHeal()) {
             return false
         }
 
