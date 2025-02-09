@@ -282,10 +282,7 @@
         const nextAction = getNextActionData()
 
         setTimeout(runAddon, nextAction.time - new Date())
-
-        setTimeout(() => {
-            showInfoWindow(nextAction)
-        }, 5000)
+        showInfoWindow(nextAction)
     }
 
     function showInfoWindow(nextAction) {
@@ -883,8 +880,8 @@
     }
 
     async function checkHealing() {
-        if (!canHeal() && !isLowHp()) {
-            return true
+        if (!canHeal() && isLowHp()) {
+            return false
         }
 
         if (document.body.id !== 'overviewPage') {
