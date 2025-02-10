@@ -48,9 +48,10 @@
         healing: 'Healing',
         healingPercentage: 'Stop/Heal under HP %',
         healingBags: 'Healing bags',
-        healthWarning: 'Healing disabled - fight actions will not be executed',
+        healthWarning: 'Healing disabled:',
+        healthWarningExecution: 'will not be executed',
         highest: 'Highest',
-        in: 'In',
+        in: 'in',
         lastUsed: "Last Used",
         location: 'Location',
         lowest: 'Lowest',
@@ -281,8 +282,14 @@
     function queueNextAction() {
         const nextAction = getNextActionData()
 
-        setTimeout(runAddon, nextAction.time - new Date())
-        showInfoWindow(nextAction)
+        if (!nextAction) {
+            return
+        }
+
+        localStorage.setItem('nextActionTime', nextAction.time.getTime())
+        worker.postMessage(nextAction.time.getTime())
+
+        setTimeout(showInfoWindow, 3000, nextAction)
     }
 
     function showInfoWindow(nextAction) {
@@ -325,10 +332,22 @@
         let content = ''
 
         if (!canHeal() && isLowHp()) {
-            content =
+            const enabledSettings = []
+
+            if (JSON.parse(getSettingValue('expedition.enabled'))) {
+                enabledSettings.push(translations.expedition)
+            }
+
+            if (JSON.parse(getSettingValue('arena.enabled'))) {
+                enabledSettings.push(translations.arena)
+            }
+
+            if (enabledSettings.length) {
+                content =
+                    `
+                    <span style="white-space: nowrap;color: red;">${translations.healthWarning} <span style="color: #58ffbb;">${enabledSettings.join(', ')}</span> ${translations.healthWarningExecution}</span><br>
                 `
-                    <span style="white-space: nowrap;color: red;">${translations.healthWarning}</span><br>
-                `
+            }
         }
 
         content +=
@@ -829,7 +848,7 @@
     }
 
     async function checkCircusTurma() {
-        if (!JSON.parse(getSettingValue('circusTurma.enabled')) || getNextActionTypeTime(actionTypes.circusTurma) > new Date() || !await checkHealing()) {
+        if (!JSON.parse(getSettingValue('circusTurma.enabled')) || getNextActionTypeTime(actionTypes.circusTurma) > new Date()) {
             return
         }
 
@@ -906,6 +925,7 @@
 
         for (const tabIndex of healingBags) {
             await enqueueClick(inventoryTabs[parseInt(tabIndex) - 1])
+            await new Promise(resolve => setTimeout(resolve, 1000))
 
             while (isLowHp()) {
                 food = await calculateBestFood()
@@ -915,6 +935,10 @@
                 } else {
                     break
                 }
+            }
+
+            if (!isLowHp()) {
+                return
             }
         }
 
@@ -1198,7 +1222,39 @@
         }
     })
 
-    if (JSON.parse(getSettingValue('gladiatusAddon.enabled'))) {
-        window.onload = runAddon
+    const workerCode = `
+        self.onmessage = function(e) {
+            let targetTime = e.data
+
+            function checkTime() {
+                const remainingTime = targetTime - Date.now()
+                if (remainingTime <= 0) {
+                    postMessage("runAddon")
+                } else {
+                    setTimeout(checkTime, Math.min(remainingTime, 10 * 1000)) // Check every 10s if far away
+                }
+            }
+
+            checkTime()
+        }
+    `
+
+    const worker = new Worker(URL.createObjectURL(new Blob([workerCode], { type: 'application/javascript' })))
+
+    worker.onmessage = (event) => {
+        if (event.data === "runAddon") {
+            runAddon()
+        }
+    }
+
+    window.onload = () => {
+        if (JSON.parse(getSettingValue('gladiatusAddon.enabled'))) {
+            runAddon()
+        }
+
+        const storedTime = localStorage.getItem('nextActionTime')
+        if (storedTime) {
+            worker.postMessage(parseInt(storedTime, 10))
+        }
     }
 })()
