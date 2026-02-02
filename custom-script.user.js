@@ -1389,7 +1389,7 @@
                 if (valueSpan) {
                     valueSpan.textContent = newValue + (sectionKey === 'healing.healingPercentage' ? '%' : '')
                 }
-            } else {
+            } else if (sectionKey !== 'rubyExpedition.rubyUsage'){
                 localStorage.setItem(sectionKey, selectedValue)
                 updateButtonsStyle(sectionKey, selectedValue)
             }
