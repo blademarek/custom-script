@@ -1,10 +1,19 @@
 # Custom script
 
 * Automatization script for gladiatus:
-  - Auto quests in pantheon
-  - Auto expedition
-  - Auto dungeon
-  
+  - Quests in Pantheon
+  - Expedition (incl. ruby usage)
+  - Dungeon
+  - Arena
+  - Circus Turma
+  - Smelting
+  - Confirm of After fight search & other notifications (free items on new day)
+  - Healing
+  - Event Expedition (beta)
+  - Gold storing on Auction House
+
+Some functionality, like healing/smelting/auction storage..., relies heavily on the Gladiatus Crazy Addon (no special setup needed): https://gladiatus.dinodevs.com/
+
 Installation:
 ---------
 
@@ -16,6 +25,3 @@ Usage:
 
 1. Set your configuration.
 2. Press Start
-
-
-![N|Solid](assets/preview.jpg)
