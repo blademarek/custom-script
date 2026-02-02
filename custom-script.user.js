@@ -34,9 +34,12 @@
     const translations = {
         advanced: 'Advanced',
         afterFightSearch: 'Setting',
-        arena: 'Arena',
+        arena: 'Arena Provinciarum',
+        auctionGoldStorage: 'Auction gold storage',
         boss: 'Boss',
-        circusTurma: 'Circus Turma',
+        circusTurma: 'Circus Provinciarum',
+        deelay: 'Deelay',
+        deelaySeconds: 'Click deelay (seconds)',
         difficulty: 'Difficulty',
         disable: 'Disable',
         dungeon: 'Dungeon',
@@ -55,6 +58,8 @@
         lastUsed: "Last Used",
         location: 'Location',
         lowest: 'Lowest',
+        minGoldValue: 'Store above gold amount',
+        minAuctionItemValue: 'Min item value',
         nextAction: 'Next action',
         normal: 'Normal',
         noAction: 'No Action queued',
@@ -77,7 +82,8 @@
         dungeon: 'dungeon',
         arena: 'arena',
         circusTurma: 'circusTurma',
-        smelting: 'smelting'
+        smelting: 'smelting',
+        eventExpedition: 'eventExpedition'
     }
 
     const settings = {
@@ -113,7 +119,7 @@
             ]
         },
         search: {
-            enabled: 'false',
+            onOffSection: false,
             title: translations.search,
             subsections: [
                 { key: 'afterFightSearch', defaultValue: 'Thorough' }
@@ -155,10 +161,40 @@
                 { key: 'smeltingBags', defaultValue: JSON.stringify([]) },
             ]
         },
+        deelay: {
+            onOffSection: false,
+            title: translations.deelay,
+            subsections: [
+                { key: 'deelaySeconds', defaultValue: '1' },
+            ]
+        },
+        auctionGoldStorage: {
+            enabled: 'false',
+            title: translations.auctionGoldStorage,
+            subsections: [
+                { key: 'minGoldValue', defaultValue: '1000' },
+                { key: 'minAuctionItemValue', defaultValue: '1000' },
+            ]
+        },
     }
 
-    const clickQueue = []
-    let isProcessing = false
+    let infoInterval
+
+    const startStopButton = createMenuButton({
+        id: 'autoGoButton',
+        className: 'menuitem py-2 px-4 rounded-md text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-opacity-50',
+        innerHTML: '',
+        onClick: () => toggleStartStop(),
+        position: 0
+    })
+
+    createMenuButton({
+        className: 'menuitem py-2 px-4 rounded-md text-white bg-gray-600 hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-opacity-50',
+        innerHTML: `<img src="${assetsUrl}/cog.svg" title="Settings" height="20" width="20" style="filter: invert(83%) sepia(52%) saturate(503%) hue-rotate(85deg) brightness(103%) contrast(101%);" alt="Settings">`,
+        style: 'display: flex; justify-content: center; align-items: center; height: 27px; width: 27px; cursor: pointer; border: none; padding: 0; background-image: url("https://i.imgur.com/jf7BXTX.png");',
+        onClick: () => openSettings(),
+        position: 1
+    })
 
     function createButton({ id, className, innerHTML, style, onClick }) {
         const button = document.createElement("button")
@@ -170,37 +206,32 @@
         return button
     }
 
-    const startStopButton = createButton({
-        id: "autoGoButton",
-        className: "menuitem py-2 px-4 rounded-md text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:ring-opacity-50",
-        innerHTML: localStorage.getItem('gladiatusAddon.enabled') === 'true' ? "STOP" : "START",
-        onClick: () => {
-            const addonStatus = !(localStorage.getItem('gladiatusAddon.enabled') === 'true')
-            localStorage.setItem('gladiatusAddon.enabled', addonStatus.toString())
+    function createMenuButton(props) {
+        const mainMenu = document.getElementById('mainmenu')
+        const btn = createButton(props)
+        mainMenu.insertBefore(btn, mainMenu.children[props.position ?? 0])
+        return btn
+    }
 
-            startStopButton.innerHTML = addonStatus ? "STOP" : "START"
+    function toggleStartStop() {
+        const enabled = !(localStorage.getItem('gladiatusAddon.enabled') === 'true')
+        localStorage.setItem('gladiatusAddon.enabled', enabled.toString())
+        startStopButton.innerHTML = enabled ? 'STOP' : 'START'
 
-            if (addonStatus) {
-                runAddon()
-            }
+        // TODO - decide if we should remove all/some/none timers after toggle
+        // localStorage.removeItem('actionTimers')
+        localStorage.removeItem('nextActionTime')
+
+        if (enabled) {
+            runAddon()
+        } else {
+            toggleInfoWindow(false)
         }
-    })
+    }
 
-    document
-        .getElementById("mainmenu")
-        .insertBefore(startStopButton, document.getElementById("mainmenu").children[0])
-
-    const settingsButton = createButton({
-        className: "menuitem py-2 px-4 rounded-md text-white bg-gray-600 hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-opacity-50",
-        innerHTML: `<img src="${assetsUrl}/cog.svg" title="Settings" height="20" width="20" style="filter: invert(83%) sepia(52%) saturate(503%) hue-rotate(85deg) brightness(103%) contrast(101%);" alt="Settings">`,
-        style: "display: flex; justify-content: center; align-items: center; height: 27px; width: 27px; cursor: pointer; border: none; padding: 0; background-image: url('https://i.imgur.com/jf7BXTX.png');",
-        onClick: () => {
-            openSettings()
-        }
-    })
-    document
-        .getElementById("mainmenu")
-        .insertBefore(settingsButton, document.getElementById("mainmenu").children[1])
+    function renderStartStopButton() {
+        startStopButton.innerHTML = localStorage.getItem('gladiatusAddon.enabled') === 'true' ? 'STOP' : 'START'
+    }
 
     function openSettings() {
         toggleInfoWindow(false)
@@ -232,6 +263,19 @@
         overlayBack.setAttribute('style', `height: ${wrapperHeight}px;`)
         overlayBack.addEventListener('click', closeSettings)
         document.body.appendChild(overlayBack)
+
+        const originalClose = closeSettings
+
+        closeSettings = () => {
+            originalClose()
+            document.removeEventListener('keydown', onEscape)
+        }
+
+        const onEscape = (e) => {
+            if (e.key === 'Escape') closeSettings()
+        }
+
+        document.addEventListener('keydown', onEscape)
     }
 
     function closeSettings() {
@@ -247,18 +291,20 @@
 
     function createSettingsBox(title, key, savedValue, subsections = []) {
         const subsectionHTML = generateSubSections(key, subsections)
+        const onOffSectionHTML = settings[key]?.onOffSection === false ? ``: `
+            <div class="settingsSubContent">
+                ${['On', 'Off'].map(option => `
+                    <div class="settingsButton" data-section="${key}.enabled" data-value="${option}"
+                        style="${getOnOffButtonColor(key, option)}">
+                        ${option}
+                    </div>
+                `).join('')}
+            </div>`
 
         return `
             <div class="settings_box">
                 <div class="settingsHeaderBig">${title}</div>
-                <div class="settingsSubContent">
-                    ${['On', 'Off'].map(option => `
-                        <div class="settingsButton" data-section="${key}.enabled" data-value="${option}"
-                            style="${getOnOffButtonColor(key, option)}">
-                            ${option}
-                        </div>
-                    `).join('')}
-                </div>
+                ${onOffSectionHTML}
                 ${subsectionHTML}
             </div>
         `
@@ -282,14 +328,15 @@
     function queueNextAction() {
         const nextAction = getNextActionData()
 
-        if (!nextAction) {
-            return
+        if (nextAction) {
+            localStorage.setItem('nextActionTime', nextAction.time.getTime())
+            worker.postMessage(nextAction.time.getTime())
+            setTimeout(showInfoWindow, 3000, nextAction)
+        } else {
+            localStorage.setItem('gladiatusAddon.enabled', 'false')
+            renderStartStopButton()
+            showInfoWindow()
         }
-
-        localStorage.setItem('nextActionTime', nextAction.time.getTime())
-        worker.postMessage(nextAction.time.getTime())
-
-        setTimeout(showInfoWindow, 3000, nextAction)
     }
 
     function showInfoWindow(nextAction) {
@@ -301,17 +348,24 @@
             infoWindow.id = 'infoWindow'
 
             headerGame.prepend(infoWindow)
-
-            if (nextAction) {
-                infoWindow.innerHTML = getInfoWindowContent(nextAction)
-
-                setInterval(function() {
-                    infoWindow.innerHTML = getInfoWindowContent(nextAction)
-                }, 1000);
-            } else {
-                toggleInfoWindow(false)
-            }
         }
+
+        if (infoInterval) {
+            clearInterval(infoInterval)
+            infoInterval = null
+        }
+
+        if (nextAction) {
+            infoWindow.innerHTML = getInfoWindowContent(nextAction)
+
+            infoInterval = setInterval(() => {
+                infoWindow.innerHTML = getInfoWindowContent(nextAction)
+            }, 1000)
+        } else {
+            infoWindow.innerHTML = getInfoWindowContent()
+        }
+
+        toggleInfoWindow(true)
     }
 
     function toggleInfoWindow(show) {
@@ -331,7 +385,7 @@
     function getInfoWindowContent(nextAction) {
         let content = ''
 
-        if (!canHeal() && isLowHp()) {
+        if (!healingPossible() && isLowHp()) {
             const enabledSettings = []
 
             if (JSON.parse(getSettingValue('expedition.enabled'))) {
@@ -350,8 +404,9 @@
             }
         }
 
-        content +=
-            `
+        if (nextAction) {
+            content +=
+                `
                 <div style="margin-top:5px">
                     <span style="color: #fff;">${translations.nextAction}: </span>
                     <span>${translations[nextAction.type]}</span>
@@ -359,6 +414,15 @@
                     <span>${formatNextActionTime(nextAction.time)}</span>
                 </div>
             `
+        } else {
+            content +=
+                `
+                <div style="margin-top:5px">
+                    <span style="color: #fff;">${translations.noAction}</span>
+                </div>
+            `
+        }
+
         return content
     }
 
@@ -368,7 +432,7 @@
         return Object.entries(currentActions)
             .map(([type, time]) => {
                 const actionStatus = JSON.parse(getSettingValue(`${type}.enabled`))
-                if (actionStatus === false || ([actionTypes.arena, actionTypes.circusTurma, actionTypes.expedition].includes(type) && !canHeal() && isLowHp())) {
+                if (actionStatus === false || ([actionTypes.arena, actionTypes.circusTurma, actionTypes.expedition].includes(type) && !healingPossible() && isLowHp())) {
                     return null
                 }
 
@@ -454,7 +518,7 @@
                     const value = parseInt(getSettingValue('rubyExpedition.rubyUsage'))
 
                     contentHTML = `
-                    <input type="number" id="set_${subsectionKey}" data-section="${key}.${subsectionKey}" class="settingsInput settingsButton" 
+                    <input type="number" id="set_${subsectionKey}" data-section="${key}.${subsectionKey}" class="settingsInput settingsButton"
                         value="${value}" min="0">
                     `
                     break
@@ -474,8 +538,8 @@
                     settingsValue = Array.isArray(settingsValue) ? settings : JSON.parse(settingsValue)
 
                     contentHTML = options.map(option => `
-                    <div id="set_${option}_quests_type" data-section="${key}.${subsectionKey}" data-value="${option}" 
-                        class="settingsButton quest-type ${option} ${settingsValue.includes(option) ? 'active' : ''}" 
+                    <div id="set_${option}_quests_type" data-section="${key}.${subsectionKey}" data-value="${option}"
+                        class="settingsButton quest-type ${option} ${settingsValue.includes(option) ? 'active' : ''}"
                         style="${settingsValue.includes(option) ? 'border: 2px solid green;' : 'filter: brightness(50%)'}">
                     </div>
                 `).join('')
@@ -484,9 +548,30 @@
                 case 'healingPercentage':
                     contentHTML = `
                     <div class="slider-container">
-                        <input type="range" id="healingPercentageSlider" min="1" max="100" value="${settingsValue}" class="slider settingsSlider" 
+                        <input type="range" id="healingPercentageSlider" min="1" max="100" value="${settingsValue}" class="slider settingsSlider"
                             data-section="${key}.${subsectionKey}">
                         <span>${settingsValue}%</span>
+                    </div>
+                    `
+                    break
+
+                case 'deelaySeconds':
+                    contentHTML = `
+                    <div class="slider-container">
+                        <input type="range" id="${subsectionKey}Slider" min="1" max="10" value="${settingsValue}" class="slider settingsSlider"
+                            data-section="${key}.${subsectionKey}">
+                        <span>${settingsValue}</span>
+                    </div>
+                    `
+                    break
+
+                case 'minGoldValue':
+                case 'minAuctionItemValue':
+                    contentHTML = `
+                    <div class="slider-container">
+                        <input type="range" id="${subsectionKey}Slider" min="1000" max="100000" value="${settingsValue}" class="slider settingsSlider"
+                            data-section="${key}.${subsectionKey}">
+                        <span>${settingsValue}</span>
                     </div>
                     `
                     break
@@ -495,7 +580,7 @@
                 case 'smeltingBags':
                     const romanNumerals = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII']
                     contentHTML = romanNumerals.map((option, index) => `
-                    <div id="set_${option}_healing_bags" data-section="${key}.${subsectionKey}" data-value="${index + 1}" 
+                    <div id="set_${option}_healing_bags" data-section="${key}.${subsectionKey}" data-value="${index + 1}"
                         class="settingsButton"
                         style="${getButtonStyle(key + '.' + subsectionKey, (index + 1).toString())}">
                         ${option}
@@ -586,95 +671,65 @@
         })
     }
 
-    function getRandomInt(min, max) {
-        min = Math.ceil(min)
-        max = Math.floor(max)
-
+    function getRandomDeelay() {
+        const deelaySecondsSetting = parseFloat(getSettingValue('deelay.deelaySeconds'))
+        const min = Math.ceil(deelaySecondsSetting * 1000)
+        const max = Math.floor((deelaySecondsSetting + 1) * 1000)
         return Math.floor(Math.random() * (max - min + 1)) + min
     }
 
-    function enqueueClick(selector, delay) {
-        return new Promise((resolve) => {
-            clickQueue.push({ selector, resolve, delay })
-            processQueue()
-        })
-    }
-
-    async function processQueue() {
-        if (isProcessing || clickQueue.length === 0) {
-            return
-        }
-
-        isProcessing = true
-
-        while (clickQueue.length > 0) {
-            const { selector, resolve, delay } = clickQueue.shift()
-            const success = await clickElement(selector, delay)
-
-            resolve(success)
-
-            if (success) {
-                break
-            }
-        }
-
-        isProcessing = false
-    }
-
     async function clickElement(selector, delay) {
-        return new Promise((resolve) => {
-            const delay = getRandomInt(1000, 2000)
-            // delay = delay !== undefined ? delay : 0
-            let elements
+        const finalDelay = delay !== undefined ? delay : getRandomDeelay()
+        await new Promise(r => setTimeout(r, finalDelay))
 
-            if (selector instanceof Element) {
-                elements = [selector]
-            } else {
-                elements = document.querySelectorAll(selector)
-            }
+        let elements
+        if (selector instanceof Element) {
+            elements = [selector]
+        } else {
+            elements = document.querySelectorAll(selector)
+        }
 
-            const elementToClick = elements[0]
+        const elementToClick = elements[0]
+        if (!elementToClick) {
+            return false
+        }
 
-            if (elementToClick) {
-                setTimeout(() => {
-                    const input = elementToClick.querySelector("input")
+        const input = elementToClick.querySelector('input')
 
-                    if (input) {
-                        input.click()
-                    } else {
-                        elementToClick.click()
-                    }
+        if (input) {
+            input.click()
+        } else {
+            elementToClick.click()
+        }
 
-                    resolve(true)
-                }, delay)
-            } else {
-                resolve(false)
-            }
-        })
+        await new Promise(r => setTimeout(r, finalDelay))
+
+        return true
     }
 
     async function runAddon() {
-        // TODO check other popup windows like the cubes game
-        await enqueueClick('#blackoutDialogLoginBonus', 0)
-        await enqueueClick('#blackoutDialognotification', 0)
-        await afterFightSearch()
+        if (JSON.parse(getSettingValue('gladiatusAddon.enabled'))) {
+            // TODO check other popup windows like the cubes game
+            await clickElement('#blackoutDialogLoginBonus', 0)
+            await clickElement('#blackoutDialognotification', 0)
+            await afterFightSearch()
 
-        await checkQuests()
-        await checkExpeditions()
-        await checkDungeons()
-        await checkArena()
-        await checkCircusTurma()
-        await checkSmelting()
-        queueNextAction()
+            await checkQuests()
+            await checkExpeditions()
+            await checkDungeons()
+            await checkArena()
+            await checkCircusTurma()
+            await checkSmelting()
+            await checkAuctionStore()
+            queueNextAction()
+        }
     }
 
     async function afterFightSearch() {
-        const enabled = JSON.parse(getSettingValue('search.enabled'))
         const searchSetting = getSettingValue('search.afterFightSearch')
+        const position = { 'Quick': 2, 'Thorough': 3 }[searchSetting]
 
-        const position = enabled ? 1 : { 'Quick': 2, 'Thorough': 3 }[searchSetting]
-
-        await enqueueClick(`#blackoutDialog button:nth-of-type(${position})`, 0)
+        await clickElement(`#blackoutDialog button:nth-of-type(${position})`, 0)
     }
 
     async function checkQuests() {
@@ -683,8 +738,8 @@
         }
 
         if (document.body.id === 'questsPage') {
-            await enqueueClick(document.querySelector('.quest_slot_button_restart'))
-            await enqueueClick(document.querySelector('.quest_slot_button_finish'))
+            await clickElement(document.querySelector('.quest_slot_button_restart'))
+            await clickElement(document.querySelector('.quest_slot_button_finish'))
 
             let questTypes = JSON.parse(getSettingValue('quest.questType'))
             let selector = questTypes.length
@@ -692,13 +747,13 @@
                 : null
 
             if (selector) {
-                await enqueueClick(selector)
+                await clickElement(selector)
             }
 
             let questCooldown = document.querySelectorAll('#quest_header_cooldown')
 
-            if (!questCooldown.length && !(await enqueueClick(selector))) {
-                await enqueueClick('#quest_footer_reroll input[type="button"]')
+            if (!questCooldown.length && !(await clickElement(selector))) {
+                await clickElement('#quest_footer_reroll input[type="button"]')
             }
 
             const nextQuestTime = calculateTaskFinishedTime(document.querySelector('#quest_header_cooldown span').textContent.trim())
@@ -713,7 +768,11 @@
         const rubiesToUseCount = parseInt(getSettingValue('rubyExpedition.rubyUsage'))
         const fightWithRubies = useRubies && rubiesToUseCount > 0
 
-        if ((!JSON.parse(getSettingValue('expedition.enabled')) || getNextActionTypeTime(actionTypes.expedition) > new Date()) && !fightWithRubies || !await checkHealing()) {
+        if ((!JSON.parse(getSettingValue('expedition.enabled')) || getNextActionTypeTime(actionTypes.expedition) > new Date()) && !fightWithRubies) {
+            return
+        }
+
+        if (!await checkHealing()) {
             return
         }
 
@@ -731,17 +790,16 @@
             await fightExpedition(expeditionCooldown)
         } else {
             if (location === 'LAST USED') {
-                await enqueueClick('#cooldown_bar_expedition a.cooldown_bar_link')
-            } else {
-                const selector = Array.from(document.querySelectorAll('#submenu2 a.menuitem'))
-                    .find(a => a.textContent.trim() === location)
+                await clickElement('#cooldown_bar_expedition a.cooldown_bar_link')
+            }
 
-                if (selector) {
-                    await enqueueClick(selector)
-                } else {
-                    localStorage.setItem('expedition.enabled', 'false')
-                    localStorage.setItem('expedition.location', 'LAST USED')
-                }
+            const selector = Array.from(document.querySelectorAll('#submenu2 a.menuitem'))
+                .find(a => a.textContent.trim() === location)
+
+            if (selector) {
+                await clickElement(selector)
+            } else {
+                localStorage.setItem('expedition.enabled', 'false')
             }
         }
     }
@@ -751,13 +809,63 @@
 
         if (expeditionCooldown) {
             const rubiesToUseCount = parseInt(getSettingValue('rubyExpedition.rubyUsage'))
-            localStorage.setItem('rubyExpedition.rubyUsage', (rubiesToUseCount - 1).toString())
+            localStorage.setItem('rubyExpedition.rubyUsage', Math.max(0, (rubiesToUseCount - 1)).toString())
         }
 
         if (enemy === 'Boss') {
-            await enqueueClick(`.expedition_box:nth-of-type(4) .expedition_button`)
+            await clickElement(`.expedition_box:nth-of-type(4) .expedition_button`)
         } else {
-            await enqueueClick(`.expedition_box:nth-of-type(${enemy}) .expedition_button`)
+            await clickElement(`.expedition_box:nth-of-type(${enemy}) .expedition_button`)
+        }
+    }
+
+    // TODO - integrate the functionality of the event expedition - only available during special occasions, think about the eventTimers reset on midnight
+    async function checkEventExpedition() {
+        if ((!JSON.parse(getSettingValue('eventExpedition.enabled')) || getNextActionTypeTime(actionTypes.eventExpedition) > new Date())) {
+            return
+        }
+
+        if (!await checkHealing()) {
+            return
+        }
+
+        const eventLive = document.querySelector('#banner_event')
+
+        if (!eventLive) {
+            return
+        }
+
+        const eventExpeditionCooldown = [...eventLive.querySelectorAll('span')].find(span => span.textContent.trim().startsWith('-'))
+
+        if (eventExpeditionCooldown) {
+            saveNextActionTime(actionTypes.eventExpedition, calculateTaskFinishedTime('0:' + eventExpeditionCooldown.textContent.trim().replace(/^-\s*/, '')))
+            return
+        }
+
+        await fightEventExpedition()
+    }
+
+    async function fightEventExpedition() {
+        const eventLocation = document.querySelector('#banner_event_link')
+
+        if (eventLocation && window.location.href !== eventLocation.href) {
+            await clickElement(eventLocation)
+        }
+
+        const ticker = document.querySelector('span.ticker')
+        const timeMatch = ticker?.textContent.match(/\d{1,2}:\d{2}:\d{2}$/)
+        const timeValue = timeMatch ? timeMatch[0] : null
+
+        if (timeValue) {
+            saveNextActionTime(actionTypes.eventExpedition, calculateTaskFinishedTime(timeValue))
+        } else {
+            const enemy = getSettingValue('eventExpedition.opponent')
+
+            if (enemy === 'Boss') {
+                await clickElement(`.expedition_box:nth-of-type(4) .expedition_button`)
+            } else {
+                await clickElement(`.expedition_box:nth-of-type(${enemy}) .expedition_button`)
+            }
         }
     }
 
@@ -780,17 +888,17 @@
         } else {
             if (document.body.id === 'locationPage') {
                 if (getCurrentTabIndex() === 0) {
-                    await enqueueClick('.awesome-tabs:first-of-type')
+                    await clickElement('.awesome-tabs:first-of-type')
                 }
             } else {
                 if (location === 'LAST USED') {
-                    await enqueueClick('#cooldown_bar_dungeon a.cooldown_bar_link')
+                    await clickElement('#cooldown_bar_dungeon a.cooldown_bar_link')
                 } else {
                     const selector = Array.from(document.querySelectorAll('#submenu2 a.menuitem'))
                         .find(a => a.textContent.trim() === location)
 
                     if (selector) {
-                        await enqueueClick(selector)
+                        await clickElement(selector)
                     } else {
                         localStorage.setItem('dungeon.enabled', 'false')
                         localStorage.setItem('dungeon.location', 'LAST USED')
@@ -805,9 +913,9 @@
 
         if (!isDifficultySelectWindow) {
             if (getSettingValue('dungeon.difficulty') === 'Normal') {
-                await enqueueClick('[name="dif1"]')
+                await clickElement('[name="dif1"]')
             } else {
-                await enqueueClick('[name="dif2"]')
+                await clickElement('[name="dif2"]')
             }
         } else {
             const isBoss = Array.from(document.querySelectorAll('img[onclick]'))
@@ -817,15 +925,19 @@
                 })
 
             if (!isBoss || getSettingValue('dungeon.fightBoss') === 'Yes') {
-                await enqueueClick(document.querySelector('img[onclick]'))
+                await clickElement(document.querySelector('img[onclick]'))
             } else {
-                await enqueueClick('#content .button1')
+                await clickElement('#content .button1')
             }
         }
     }
 
     async function checkArena() {
-        if (!JSON.parse(getSettingValue('arena.enabled')) || getNextActionTypeTime(actionTypes.arena) > new Date() || !await checkHealing()) {
+        if (!JSON.parse(getSettingValue('arena.enabled')) || getNextActionTypeTime(actionTypes.arena) > new Date()) {
+            return
+        }
+
+        if (!await checkHealing()) {
             return
         }
 
@@ -838,12 +950,12 @@
 
         if (document.body.id === 'arenaPage') {
             if (getCurrentTabIndex() !== 1) {
-                await enqueueClick('.awesome-tabs:first-of-type')
+                await clickElement('.awesome-tabs:first-of-type')
             }
 
             await fightBySetting(getSettingValue('arena.opponentLevel'), 'own2')
         } else {
-            await enqueueClick('#cooldown_bar_arena a.cooldown_bar_link')
+            await clickElement('#cooldown_bar_arena a.cooldown_bar_link')
         }
     }
 
@@ -861,12 +973,12 @@
 
         if (document.body.id === 'arenaPage') {
             if (getCurrentTabIndex() !== 3) {
-                await enqueueClick('.awesome-tabs:nth-of-type(4)')
+                await clickElement('.awesome-tabs:nth-of-type(4)')
             }
 
             await fightBySetting(getSettingValue('circusTurma.opponentLevel'), 'own3')
         } else {
-            await enqueueClick('#cooldown_bar_ct a.cooldown_bar_link')
+            await clickElement('#cooldown_bar_ct a.cooldown_bar_link')
         }
     }
 
@@ -903,7 +1015,7 @@
             return true
         }
 
-        if (!canHeal()) {
+        if (!healingPossible()) {
             return false
         }
 
@@ -911,7 +1023,7 @@
             await goToPage('overview')
         } else {
             if (getCurrentTabIndex() !== 0) {
-                await enqueueClick('.awesome-tabs:nth-of-type(1)')
+                await clickElement('.awesome-tabs:nth-of-type(1)')
             }
         }
 
@@ -924,8 +1036,7 @@
         let food = null
 
         for (const tabIndex of healingBags) {
-            await enqueueClick(inventoryTabs[parseInt(tabIndex) - 1])
-            await new Promise(resolve => setTimeout(resolve, 1000))
+            await clickElement(inventoryTabs[parseInt(tabIndex) - 1])
 
             while (isLowHp()) {
                 food = await calculateBestFood()
@@ -991,7 +1102,6 @@
 
         if (targetElement) {
             simulateDrag(foodToUser.element, targetElement, targetElement.getBoundingClientRect().left + targetElement.offsetWidth / 2, targetElement.getBoundingClientRect().top + targetElement.offsetHeight / 2)
-            await new Promise(resolve => setTimeout(resolve, 1000))
         }
     }
 
@@ -1000,29 +1110,21 @@
             return
         }
 
-        const nextForgeFinished = localStorage.getItem('nextForgeFinished')
-
-        if (nextForgeFinished && new Date(nextForgeFinished) > new Date()) {
-            return
+        if (document.body.id !== 'forgePage') {
+            await clickElement(Array.from(document.querySelectorAll('#submenu1 a.menuitem')).find(a => a.href.includes('smeltery')))
         }
 
-        if (document.body.id === 'forgePage') {
-            await smeltItems()
-        } else {
-            await enqueueClick(Array.from(document.querySelectorAll('#submenu1 a.menuitem')).find(a => a.href.includes('smeltery')))
-        }
+        await smeltItems()
     }
 
     async function smeltItems() {
         const smeltTabs = Array.from(document.querySelectorAll('#forge_nav div'))
-        let smeltItemsFound = true
         let forgeFinishTimes = []
 
         for (const smeltTabIndex of smeltTabs.keys()) {
-            await enqueueClick(smeltTabs[smeltTabIndex])
+            await clickElement(smeltTabs[smeltTabIndex])
 
             if (smeltTabs[smeltTabIndex].classList.contains('forge_crafting')) {
-                await new Promise(resolve => setTimeout(resolve, 2000))
                 const taskFinishedTime = calculateTaskFinishedTime(document.querySelector('#forge_time_remaining').textContent.trim())
                 forgeFinishTimes.push(taskFinishedTime)
 
@@ -1030,13 +1132,14 @@
             }
 
             if (smeltTabs[smeltTabIndex].classList.contains('forge_finished-succeeded')) {
-                await enqueueClick('#forge_horreum')
+                await clickElement('#forge_horreum')
             }
 
-            if (smeltItemsFound) {
-                smeltItemsFound = await smeltItem()
-            } else {
+            const smelted = await smeltItem()
+
+            if (!smelted) {
                 localStorage.setItem('smelting.enabled', 'false')
+                return
             }
         }
 
@@ -1055,20 +1158,120 @@
         const inventoryTabs = Array.from(document.querySelectorAll('.inventoryBox .awesome-tabs'))
 
         for (const tabIndex of smeltBags) {
-            await enqueueClick(inventoryTabs[parseInt(tabIndex) - 1])
+            await clickElement(inventoryTabs[parseInt(tabIndex) - 1])
 
             const smeltItems = Array.from(document.querySelectorAll('#inv div'))
                 .filter(div => ['1', '2', '4', '8', '48', '256', '512', '1024'].includes(div.getAttribute('data-content-type')))
 
             if (smeltItems.length) {
                 simulateDrag(smeltItems[0], smeltPlace, smeltPlace.getBoundingClientRect().left + smeltPlace.offsetWidth / 2, smeltPlace.getBoundingClientRect().top + smeltPlace.offsetHeight / 2)
-                await new Promise(resolve => setTimeout(resolve, 1000))
-                await enqueueClick(document.querySelector('#rent .awesome-button[data-rent="2"]'))
+                await clickElement(document.querySelector('#rent .awesome-button[data-rent="2"]'))
                 return true
             }
         }
 
         return false
+    }
+
+    async function checkAuctionStore() {
+        if (!JSON.parse(getSettingValue('auctionGoldStorage.enabled'))) {
+            return
+        }
+
+        const currentGold = parseInt(document.querySelector('#sstat_gold_val').textContent.replace('.', ''), 10)
+
+        if (currentGold < JSON.parse(getSettingValue('auctionGoldStorage.minGoldValue'))) {
+            return
+        }
+
+        if (document.body.id === 'auctionPage') {
+            await checkAuctionFilter()
+            await buyAuctionItems(currentGold)
+        } else {
+            await clickElement(Array.from(document.querySelectorAll('#submenu1 a.menuitem')).find(a => a.href.includes('auction')))
+        }
+    }
+
+    async function checkAuctionFilter() {
+        const form = document.forms.filterForm
+        let changed = false
+
+        if (form.qry.value.trim() !== '') {
+            form.qry.value = ''
+            changed = true
+        }
+
+        if (form.itemLevel.selectedIndex !== 0) {
+            form.itemLevel.selectedIndex = 0
+            changed = true
+        }
+
+        if (form.itemType.selectedIndex !== 0) {
+            form.itemType.selectedIndex = 0
+            changed = true
+        }
+
+        if (form.itemQuality.selectedIndex !== 0) {
+            form.itemQuality.selectedIndex = 0
+            changed = true
+        }
+
+        if (!changed) {
+            return
+        }
+
+        await clickElement(form.querySelector('input[type="submit"]'))
+    }
+
+    async function buyAuctionItems(currentGold) {
+        const minItemValue = JSON.parse(getSettingValue('auctionGoldStorage.minAuctionItemValue'))
+
+        while (true) {
+            const items = await findSuitableAuctionItems(currentGold, minItemValue)
+
+            if (!items.length) {
+                break
+            }
+
+            let boughtAny = false
+
+            for (const { container, value } of items) {
+                if (value > currentGold) {
+                    continue
+                }
+
+                const button = container.querySelector('input[name="bid"]')
+
+                if (button) {
+                    await clickElement(button)
+                    currentGold -= value
+                    boughtAny = true
+                }
+            }
+
+            const affordableItems = items.some(item => item.value <= currentGold)
+
+            if (!boughtAny || !affordableItems) {
+                break
+            }
+        }
+    }
+
+    async function findSuitableAuctionItems(currentGold, minItemValue) {
+        return Array.from(document.querySelectorAll('input[name="bid_amount"][style*="rgb(255, 204, 102)"]'))
+            .map(input => {
+                const value = parseInt(input.value, 10)
+
+                if (value < minItemValue || value > currentGold) {
+                    return null
+                }
+
+                const container = input.closest('.auction_bid_div')
+
+                return { container, value }
+            })
+            .filter(Boolean)
+            .sort((a, b) => b.value - a.value)
     }
 
     function isLowHp() {
@@ -1078,7 +1281,7 @@
         return percentage < percentageSetting
     }
 
-    function canHeal() {
+    function healingPossible() {
         return JSON.parse(getSettingValue('healing.enabled')) && JSON.parse(getSettingValue('healing.healingBags')).length
     }
 
@@ -1143,14 +1346,14 @@
         switch (pageName) {
             case 'pantheon':
                 menuIndex = 1
-            break
+                break
             case 'overview':
                 menuIndex = 0
-            break
+                break
         }
 
         if (menuIndex !== null) {
-            await enqueueClick(document.querySelectorAll('.advanced_menu_link, .advanced_menu_link_active')[menuIndex])
+            await clickElement(document.querySelectorAll('.advanced_menu_link, .advanced_menu_link_active')[menuIndex])
         }
     }
 
@@ -1175,7 +1378,7 @@
                 }
 
                 updateButtonsStyle(sectionKey, selectedValue)
-            } else if (sectionKey === 'healing.healingPercentage') {
+            } else if (['healing.healingPercentage', 'deelay.deelaySeconds', 'auctionGoldStorage.minGoldValue', 'auctionGoldStorage.minAuctionItemValue'].includes(sectionKey)) {
                 const inputElement = event.target
                 const newValue = inputElement.value
                 localStorage.setItem(sectionKey, newValue)
@@ -1184,7 +1387,7 @@
                 const valueSpan = sliderContainer.querySelector('span')
 
                 if (valueSpan) {
-                    valueSpan.textContent = newValue + '%'
+                    valueSpan.textContent = newValue + (sectionKey === 'healing.healingPercentage' ? '%' : '')
                 }
             } else {
                 localStorage.setItem(sectionKey, selectedValue)
@@ -1241,16 +1444,15 @@
 
     const worker = new Worker(URL.createObjectURL(new Blob([workerCode], { type: 'application/javascript' })))
 
-    worker.onmessage = (event) => {
+    worker.onmessage = async (event) => {
         if (event.data === "runAddon") {
-            runAddon()
+            await runAddon()
         }
     }
 
-    window.onload = () => {
-        if (JSON.parse(getSettingValue('gladiatusAddon.enabled'))) {
-            runAddon()
-        }
+    window.onload = async () => {
+        renderStartStopButton()
+        await runAddon()
 
         const storedTime = localStorage.getItem('nextActionTime')
         if (storedTime) {
