@@ -38,13 +38,14 @@
 
 #settingsWindow
 {
-    position: absolute;
-    top: 300%;
-    left: 60%;
-    transform: translate(-50%, -50%);
-    z-index: 999;
-    color: #612d04;
-    font: 600 16px Arial;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    opacity: 0.6;
+    z-index: 900;
 }
 
 #settingsLanguage
@@ -99,7 +100,7 @@
 .settingsFooter
 {
     background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/footer.png');
-    height: 250px;
+    height: 75px;
     background-repeat: no-repeat;
 }
 
@@ -240,10 +241,11 @@
 
 #overlayBack
 {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
+    height: 100%;
     background: #000;
     opacity: 0.6;
     z-index: 900;
