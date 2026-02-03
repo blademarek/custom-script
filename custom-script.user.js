@@ -126,7 +126,7 @@
             ]
         },
         rubyExpedition: {
-            enabled: 'false',
+            onOffSection: false,
             title: translations.rubyExpedition,
             subsections: [
                 { key: 'rubyUsage', defaultValue: '0' }
@@ -154,11 +154,12 @@
                 { key: 'healingBags', defaultValue: JSON.stringify([]) },
             ]
         },
-        smelting: {
+        auctionGoldStorage: {
             enabled: 'false',
-            title: translations.smelting,
+            title: translations.auctionGoldStorage,
             subsections: [
-                { key: 'smeltingBags', defaultValue: JSON.stringify([]) },
+                { key: 'minGoldValue', defaultValue: '1000' },
+                { key: 'minAuctionItemValue', defaultValue: '1000' },
             ]
         },
         deelay: {
@@ -168,14 +169,13 @@
                 { key: 'deelaySeconds', defaultValue: '1' },
             ]
         },
-        auctionGoldStorage: {
+        smelting: {
             enabled: 'false',
-            title: translations.auctionGoldStorage,
+            title: translations.smelting,
             subsections: [
-                { key: 'minGoldValue', defaultValue: '1000' },
-                { key: 'minAuctionItemValue', defaultValue: '1000' },
+                { key: 'smeltingBags', defaultValue: JSON.stringify([]) },
             ]
-        },
+        }
     }
 
     let infoInterval
@@ -213,17 +213,13 @@
         return btn
     }
 
-    function toggleStartStop() {
+    async function toggleStartStop() {
         const enabled = !(localStorage.getItem('gladiatusAddon.enabled') === 'true')
         localStorage.setItem('gladiatusAddon.enabled', enabled.toString())
         startStopButton.innerHTML = enabled ? 'STOP' : 'START'
 
-        // TODO - decide if we should remove all/some/none timers after toggle
-        // localStorage.removeItem('actionTimers')
-        localStorage.removeItem('nextActionTime')
-
         if (enabled) {
-            runAddon()
+            await runAddon()
         } else {
             toggleInfoWindow(false)
         }
@@ -259,31 +255,29 @@
 
         const overlayBack = document.createElement('div')
         const wrapperHeight = document.getElementById('wrapper_game').clientHeight
-        overlayBack.setAttribute('id', 'overlayBack')
-        overlayBack.setAttribute('style', `height: ${wrapperHeight}px;`)
-        overlayBack.addEventListener('click', closeSettings)
-        document.body.appendChild(overlayBack)
-
-        const originalClose = closeSettings
-
-        closeSettings = () => {
-            originalClose()
+        const closeSettingsListener = async () => {
+            await closeSettings()
             document.removeEventListener('keydown', onEscape)
         }
 
-        const onEscape = (e) => {
-            if (e.key === 'Escape') closeSettings()
+        overlayBack.setAttribute('id', 'overlayBack')
+        overlayBack.setAttribute('style', `height: ${wrapperHeight}px;`)
+        overlayBack.addEventListener('click', closeSettingsListener)
+        document.body.appendChild(overlayBack)
+
+        const onEscape = async (e) => {
+            if (e.key === 'Escape') await closeSettingsListener()
         }
 
         document.addEventListener('keydown', onEscape)
     }
 
-    function closeSettings() {
+    async function closeSettings() {
         document.getElementById('settingsWindow').remove()
         document.getElementById('overlayBack').remove()
 
         if (JSON.parse(getSettingValue('gladiatusAddon.enabled'))) {
-            runAddon()
+            await runAddon()
         }
 
         toggleInfoWindow(true)
@@ -331,7 +325,7 @@
         if (nextAction) {
             localStorage.setItem('nextActionTime', nextAction.time.getTime())
             worker.postMessage(nextAction.time.getTime())
-            setTimeout(showInfoWindow, 3000, nextAction)
+            setTimeout(showInfoWindow, getRandomDeelay(), nextAction)
         } else {
             localStorage.setItem('gladiatusAddon.enabled', 'false')
             renderStartStopButton()
@@ -709,6 +703,9 @@
 
     async function runAddon() {
         if (JSON.parse(getSettingValue('gladiatusAddon.enabled'))) {
+            localStorage.removeItem('actionTimers')
+            localStorage.removeItem('nextActionTime')
+
             // TODO check other popup windows like the cubes game
             await clickElement('#blackoutDialogLoginBonus', 0)
             await clickElement('#blackoutDialognotification', 0)
@@ -733,7 +730,7 @@
     }
 
     async function checkQuests() {
-        if (!JSON.parse(getSettingValue('quest.enabled')) || getNextActionTypeTime(actionTypes.quest) > new Date()) {
+        if (!JSON.parse(getSettingValue('quest.enabled')) || isOnCooldown(actionTypes.quest)) {
             return
         }
 
@@ -752,34 +749,23 @@
 
             let questCooldown = document.querySelectorAll('#quest_header_cooldown')
 
-            if (!questCooldown.length && !(await clickElement(selector))) {
+            if (!questCooldown.length) {
                 await clickElement('#quest_footer_reroll input[type="button"]')
             }
 
-            const nextQuestTime = calculateTaskFinishedTime(document.querySelector('#quest_header_cooldown span').textContent.trim())
-            saveNextActionTime(actionTypes.quest, nextQuestTime)
+            saveNextActionTime(actionTypes.quest, calculateTaskFinishedTime(document.querySelector('#quest_header_cooldown span').textContent.trim()))
         } else {
             await goToPage('pantheon')
         }
     }
 
     async function checkExpeditions() {
-        const useRubies = JSON.parse(getSettingValue('rubyExpedition.enabled'))
-        const rubiesToUseCount = parseInt(getSettingValue('rubyExpedition.rubyUsage'))
-        const fightWithRubies = useRubies && rubiesToUseCount > 0
+        const fightWithRubies = parseInt(getSettingValue('rubyExpedition.rubyUsage')) > 0
+        const fightWithoutRubies = JSON.parse(getSettingValue('expedition.enabled'))
+        const cooldownCheck = document.querySelector('#cooldown_bar_expedition .cooldown_bar_fill_progress')
+        const nextActionTime = document.querySelector('#cooldown_bar_expedition').textContent.trim()
 
-        if ((!JSON.parse(getSettingValue('expedition.enabled')) || getNextActionTypeTime(actionTypes.expedition) > new Date()) && !fightWithRubies) {
-            return
-        }
-
-        if (!await checkHealing()) {
-            return
-        }
-
-        const expeditionCooldown = document.querySelector('#cooldown_bar_expedition .cooldown_bar_fill_progress')
-
-        if (expeditionCooldown && !fightWithRubies) {
-            saveNextActionTime(actionTypes.expedition, calculateTaskFinishedTime(document.querySelector('#cooldown_bar_expedition').textContent.trim()))
+        if ((!fightWithRubies && (!fightWithoutRubies || isOnCooldown(actionTypes.expedition, cooldownCheck, nextActionTime))) || !await checkHealing()) {
             return
         }
 
@@ -787,7 +773,7 @@
 
         // TODO if player decides to check next location manually and is on that page, there is no way of getting the info on which location he is currently - specifically for 'LAST USED' => will result in current location fight
         if (document.body.id === 'locationPage') {
-            await fightExpedition(expeditionCooldown)
+            await fightExpedition(cooldownCheck)
         } else {
             if (location === 'LAST USED') {
                 await clickElement('#cooldown_bar_expedition a.cooldown_bar_link')
@@ -870,14 +856,10 @@
     }
 
     async function checkDungeons() {
-        if (!JSON.parse(getSettingValue('dungeon.enabled')) || getNextActionTypeTime(actionTypes.dungeon) > new Date()) {
-            return
-        }
+        const cooldownCheck = document.querySelector('#cooldown_bar_dungeon .cooldown_bar_fill_progress')
+        const nextActionTime = document.querySelector('#cooldown_bar_dungeon').textContent.trim()
 
-        const dungeonCooldown = document.querySelector('#cooldown_bar_dungeon .cooldown_bar_fill_progress')
-
-        if (dungeonCooldown) {
-            saveNextActionTime(actionTypes.dungeon, calculateTaskFinishedTime(document.querySelector('#cooldown_bar_dungeon').textContent.trim()))
+        if (!JSON.parse(getSettingValue('dungeon.enabled')) || isOnCooldown(actionTypes.dungeon, cooldownCheck, nextActionTime)) {
             return
         }
 
@@ -933,18 +915,10 @@
     }
 
     async function checkArena() {
-        if (!JSON.parse(getSettingValue('arena.enabled')) || getNextActionTypeTime(actionTypes.arena) > new Date()) {
-            return
-        }
+        const cooldownCheck = document.querySelector('#cooldown_bar_arena .cooldown_bar_fill_progress')
+        const nextActionTime = document.querySelector('#cooldown_bar_arena').textContent.trim()
 
-        if (!await checkHealing()) {
-            return
-        }
-
-        const arenaCooldown = document.querySelector('#cooldown_bar_arena .cooldown_bar_fill_progress')
-
-        if (arenaCooldown) {
-            saveNextActionTime(actionTypes.arena, calculateTaskFinishedTime(document.querySelector('#cooldown_bar_arena').textContent.trim()))
+        if (!JSON.parse(getSettingValue('arena.enabled')) || isOnCooldown(actionTypes.arena, cooldownCheck, nextActionTime) || !await checkHealing()) {
             return
         }
 
@@ -959,15 +933,24 @@
         }
     }
 
-    async function checkCircusTurma() {
-        if (!JSON.parse(getSettingValue('circusTurma.enabled')) || getNextActionTypeTime(actionTypes.circusTurma) > new Date()) {
-            return
+    function isOnCooldown(actionType, cooldownCheck, nextActionTime) {
+        if (getNextActionTypeTime(actionType) > new Date()) {
+            return true
         }
 
-        const circusTurmaCooldown = document.querySelector('#cooldown_bar_ct .cooldown_bar_fill_progress')
+        if (cooldownCheck && nextActionTime) {
+            saveNextActionTime(actionType, calculateTaskFinishedTime(nextActionTime))
+            return true
+        }
 
-        if (circusTurmaCooldown) {
-            saveNextActionTime(actionTypes.circusTurma, calculateTaskFinishedTime(document.querySelector('#cooldown_bar_ct').textContent.trim()))
+        return false
+    }
+
+    async function checkCircusTurma() {
+        const cooldownCheck = document.querySelector('#cooldown_bar_ct .cooldown_bar_fill_progress')
+        const nextActionTime = document.querySelector('#cooldown_bar_ct').textContent.trim()
+
+        if (!JSON.parse(getSettingValue('circusTurma.enabled')) || isOnCooldown(actionTypes.circusTurma, cooldownCheck, nextActionTime)) {
             return
         }
 
@@ -982,7 +965,7 @@
         }
     }
 
-    function fightBySetting(opponentLevelSetting, tableId) {
+    async function fightBySetting(opponentLevelSetting, tableId) {
         const rows = Array.from(document.querySelectorAll(`#${tableId} tbody tr`))
             .map(row => {
                 const levelCell = row.querySelector('td:nth-of-type(2)')
@@ -1006,7 +989,7 @@
 
         if (selectedRows.length) {
             const chosenRow = selectedRows[Math.floor(Math.random() * selectedRows.length)]
-            chosenRow.row.querySelector('.attack').click()
+            await clickElement(chosenRow.row.querySelector('.attack'))
         }
     }
 
@@ -1028,6 +1011,7 @@
         }
 
         await checkFoodInBags()
+        return true
     }
 
     async function checkFoodInBags() {
@@ -1097,16 +1081,17 @@
         }
     }
 
-    async function healUp(foodToUser) {
+    async function healUp(foodToUse) {
         const targetElement = document.querySelector('.ui-droppable')
 
         if (targetElement) {
-            simulateDrag(foodToUser.element, targetElement, targetElement.getBoundingClientRect().left + targetElement.offsetWidth / 2, targetElement.getBoundingClientRect().top + targetElement.offsetHeight / 2)
+            await simulateDrag(foodToUse.element, targetElement, targetElement.getBoundingClientRect().left + targetElement.offsetWidth / 2, targetElement.getBoundingClientRect().top + targetElement.offsetHeight / 2)
         }
     }
 
     async function checkSmelting() {
-        if (!JSON.parse(getSettingValue('smelting.enabled')) || !JSON.parse(getSettingValue('smelting.smeltingBags')).length || getNextActionTypeTime(actionTypes.smelting) > new Date()) {
+        const smeltingDisabled = !JSON.parse(getSettingValue('smelting.enabled')) || !JSON.parse(getSettingValue('smelting.smeltingBags')).length
+        if (smeltingDisabled || isOnCooldown(actionTypes.smelting)) {
             return
         }
 
@@ -1164,7 +1149,7 @@
                 .filter(div => ['1', '2', '4', '8', '48', '256', '512', '1024'].includes(div.getAttribute('data-content-type')))
 
             if (smeltItems.length) {
-                simulateDrag(smeltItems[0], smeltPlace, smeltPlace.getBoundingClientRect().left + smeltPlace.offsetWidth / 2, smeltPlace.getBoundingClientRect().top + smeltPlace.offsetHeight / 2)
+                await simulateDrag(smeltItems[0], smeltPlace, smeltPlace.getBoundingClientRect().left + smeltPlace.offsetWidth / 2, smeltPlace.getBoundingClientRect().top + smeltPlace.offsetHeight / 2)
                 await clickElement(document.querySelector('#rent .awesome-button[data-rent="2"]'))
                 return true
             }
@@ -1285,7 +1270,7 @@
         return JSON.parse(getSettingValue('healing.enabled')) && JSON.parse(getSettingValue('healing.healingBags')).length
     }
 
-    function simulateDrag(item, targetElement, x, y) {
+    async function simulateDrag(item, targetElement, x, y) {
         const cords_item = item.getBoundingClientRect()
         const cords_target = { x: x, y: y }
 
@@ -1311,8 +1296,13 @@
         })
 
         item.dispatchEvent(mouseDownEvent)
+        await new Promise(r => setTimeout(r, 1000))
+
         targetElement.dispatchEvent(mouseMoveEvent)
+        await new Promise(r => setTimeout(r, 1000))
+
         targetElement.dispatchEvent(mouseUpEvent)
+        await new Promise(r => setTimeout(r, 1000))
     }
 
     function calculateTaskFinishedTime(timeRemaining) {
