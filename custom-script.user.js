@@ -219,6 +219,7 @@
         startStopButton.innerHTML = enabled ? 'STOP' : 'START'
 
         if (enabled) {
+            localStorage.removeItem('actionTimers')
             await runAddon()
         } else {
             toggleInfoWindow(false)
@@ -703,7 +704,6 @@
 
     async function runAddon() {
         if (JSON.parse(getSettingValue('gladiatusAddon.enabled'))) {
-            localStorage.removeItem('actionTimers')
             localStorage.removeItem('nextActionTime')
 
             // TODO check other popup windows like the cubes game
@@ -735,8 +735,17 @@
         }
 
         if (document.body.id === 'questsPage') {
-            await clickElement(document.querySelector('.quest_slot_button_restart'))
-            await clickElement(document.querySelector('.quest_slot_button_finish'))
+            const restartButton = document.querySelector('.quest_slot_button_restart')
+
+            if (restartButton) {
+                await clickElement(restartButton)
+            }
+
+            const finishButton = document.querySelector('.quest_slot_button_finish')
+
+            if (finishButton) {
+                await clickElement(finishButton)
+            }
 
             let questTypes = JSON.parse(getSettingValue('quest.questType'))
             let selector = questTypes.length
@@ -1107,7 +1116,7 @@
         let forgeFinishTimes = []
 
         for (const smeltTabIndex of smeltTabs.keys()) {
-            await clickElement(smeltTabs[smeltTabIndex])
+            await clickElement(smeltTabs[smeltTabIndex], 1000)
 
             if (smeltTabs[smeltTabIndex].classList.contains('forge_crafting')) {
                 const taskFinishedTime = calculateTaskFinishedTime(document.querySelector('#forge_time_remaining').textContent.trim())
@@ -1117,7 +1126,7 @@
             }
 
             if (smeltTabs[smeltTabIndex].classList.contains('forge_finished-succeeded')) {
-                await clickElement('#forge_horreum')
+                await clickElement('#forge_horreum', 0)
             }
 
             const smelted = await smeltItem()
@@ -1150,7 +1159,7 @@
 
             if (smeltItems.length) {
                 await simulateDrag(smeltItems[0], smeltPlace, smeltPlace.getBoundingClientRect().left + smeltPlace.offsetWidth / 2, smeltPlace.getBoundingClientRect().top + smeltPlace.offsetHeight / 2)
-                await clickElement(document.querySelector('#rent .awesome-button[data-rent="2"]'))
+                await clickElement(document.querySelector('#rent .awesome-button[data-rent="2"]'), 0)
                 return true
             }
         }
@@ -1296,13 +1305,13 @@
         })
 
         item.dispatchEvent(mouseDownEvent)
-        await new Promise(r => setTimeout(r, 1000))
+        await new Promise(r => setTimeout(r, 500))
 
         targetElement.dispatchEvent(mouseMoveEvent)
-        await new Promise(r => setTimeout(r, 1000))
+        await new Promise(r => setTimeout(r, 500))
 
         targetElement.dispatchEvent(mouseUpEvent)
-        await new Promise(r => setTimeout(r, 1000))
+        await new Promise(r => setTimeout(r, 500))
     }
 
     function calculateTaskFinishedTime(timeRemaining) {
