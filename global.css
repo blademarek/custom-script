@@ -1,5 +1,4 @@
-#autoGoButton
-{
+#autoGoButton {
     height: 27px;
     width: 150px;
     margin-right: 2px;
@@ -7,11 +6,11 @@
     border: none;
     color: #58ffbb;
     float: left;
-    background-image: url('https://i.imgur.com/20OoeBD.png')
+    background-image: url('https://i.imgur.com/20OoeBD.png');
+    background-size: cover;
 }
 
-#infoWindow
-{
+#infoWindow {
     align-items: center;
     text-align: center;
     position: absolute;
@@ -30,26 +29,28 @@
     z-index: 999;
 }
 
-#infoWindow span
-{
+#infoWindow span {
     padding-left: 4px;
     padding-right: 4px;
 }
 
-#settingsWindow
-{
+#settingsWindow {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #000;
-    opacity: 0.6;
-    z-index: 900;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 999;
+    color: #612d04;
+    font: 600 16px Arial;
+    display: flex;
+    flex-direction: column;
+    max-height: 90%;
+    width: 618px;
+    background-color: transparent;
+    box-sizing: border-box;
 }
 
-#settingsLanguage
-{
+#settingsLanguage {
     position: absolute;
     top: 20px;
     right: 62px;
@@ -60,10 +61,50 @@
     cursor: default;
 }
 
-#settingsLanguage img
-{
+#settingsLanguage img {
     cursor: pointer;
     border: 1px solid #612d04;
+}
+
+.settingsHeader {
+    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/header.png');
+    height: 129px;
+    width: 100%;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    letter-spacing: 2px;
+    flex: 0 0 auto;
+}
+
+.settingsHeader h1 {
+    padding-top: 60px;
+    text-align: center;
+}
+
+.settingsContent {
+    width: 100%;
+    padding: 10px 30px 0 45px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: 15px;
+    column-gap: 10px;
+    overflow-y: auto;
+    flex: 1 1 auto;
+    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/body.png');
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    box-sizing: border-box;
+    margin-top: -1px;
+    margin-bottom: -1px;
+}
+
+.settingsFooter {
+    width: 100%;
+    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/footer.png');
+    height: 75px;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    flex: 0 0 auto;
 }
 
 .slider-container {
@@ -74,99 +115,62 @@
     width: 100%;
 }
 
-.settingsHeader
-{
-    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/header.png');
-    height: 129px;
-    width: 618px;
-    background-size: cover;
-    background-repeat: no-repeat;
-    letter-spacing: 2px;
-}
-
-.settingsHeader h1 {
-    padding-top: 64px;
-}
-
-.settingsContent
-{
-    padding: 0 35px;
-    row-gap: 30px;
-    display: grid;
-    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/body.png');
-    grid-template-columns: 50% 50%;
-}
-
-.settingsFooter
-{
-    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/footer.png');
-    height: 75px;
-    background-repeat: no-repeat;
-}
-
-.settingsHeaderBig
-{
-    font-size: large;
+.settingsHeaderBig {
+    font-size: larger;
     padding-bottom: 5px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
 }
 
-.settingsHeaderSmall
-{
+.settingsHeaderSmall {
     font-size: 14px;
     font-weight: 400;
     margin-top: 6px;
+    text-shadow: 1px 1px 1px rgba(0,0,0,0.05);
 }
 
-.settingsSubContent
-{
+.settingsSubContent {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 7px 22px;
+    padding: 7px 10px;
+    flex-wrap: nowrap;
 }
 
-.settingsButton
-{
+.settingsButton {
     border: solid 1px #e9d2a0;
     height: 25px;
-    width: 100%;
+    flex: 1 1 auto;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 400;
-    margin: 0 3px;
+    margin: 2px;
     border-radius: 5px;
     box-shadow: 0 0 0 1px #8e753f;
     font-size: 13px;
-    background: #390301;
     background: linear-gradient(to bottom,#c3ab6f,#886933);
 }
 
-.w-full {
-    width: 100%;
-}
-
-.settingsSelect
-{
-    text-align: center;
-}
-
-.settingsInput
-{
-    text-align: center;
-    width: 50px;
-    display: block;
-    margin: 0 auto
-}
-
-.settingsButton:hover
-{
+.settingsButton:hover {
     background: linear-gradient(to bottom, #C3AB6F, #DACFA2);
     cursor: pointer;
 }
 
-.settings_box {
-    row-gap: 10px;
+.settingsSelect {
+    text-align: center;
+    width: 100%;
+}
+
+.settingsInput {
+    text-align: center;
+    flex: none;
+    width: 50px;
+    display: block;
+    margin: 0 auto;
+}
+
+.w-full {
+    width: 100%;
 }
 
 .settings_box.active .settingsButton.active {
@@ -187,65 +191,34 @@
 }
 
 .quest-type:hover {
-    background-size: contain;
     filter: brightness(1.2);
 }
 
-.quest-type.combat {
-    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_combat_inactive.jpg')
+.quest-type.combat { background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_combat_inactive.jpg'); }
+.quest-type.combat.active { background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_combat_active.jpg'); }
+.quest-type.arena { background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_arena_inactive.jpg'); }
+.quest-type.arena.active { background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_arena_active.jpg'); }
+.quest-type.grouparena { background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_grouparena_inactive.jpg'); }
+.quest-type.grouparena.active { background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_grouparena_active.jpg'); }
+.quest-type.expedition { background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_expedition_inactive.jpg'); }
+.quest-type.expedition.active { background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_expedition_active.jpg'); }
+.quest-type.dungeon { background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_dungeon_inactive.jpg'); }
+.quest-type.dungeon.active { background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_dungeon_active.jpg'); }
+.quest-type.items { background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_items_inactive.jpg'); }
+.quest-type.items.active { background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_items_active.jpg'); }
+
+.settings_box {
+    margin: 0 5px;
+    border-radius: 18px;
+    padding: 5px;
+    box-shadow: 0 0 0 2px #8e753f, 0 12px 30px rgba(0, 0, 0, 0.6), inset 0 0 12px rgba(255, 255, 255, 0.08);
 }
 
-.quest-type.combat.active {
-    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_combat_active.jpg')
-}
-
-.quest-type.arena {
-    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_arena_inactive.jpg')
-}
-
-.quest-type.arena.active {
-    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_arena_active.jpg')
-}
-
-.quest-type.grouparena {
-    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_grouparena_inactive.jpg')
-}
-
-.quest-type.grouparena.active {
-    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_grouparena_active.jpg')
-}
-
-.quest-type.expedition {
-    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_expedition_inactive.jpg')
-}
-
-.quest-type.expedition.active {
-    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_expedition_active.jpg')
-}
-
-.quest-type.dungeon {
-    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_dungeon_inactive.jpg')
-}
-
-.quest-type.dungeon.active {
-    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_dungeon_active.jpg')
-}
-
-.quest-type.items {
-    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_items_inactive.jpg')
-}
-
-.quest-type.items.active {
-    background-image: url('https://raw.githubusercontent.com/blademarek/custom-script/main/assets/icon_items_active.jpg')
-}
-
-#overlayBack
-{
-    position: fixed;
+#overlayBack {
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
-    height: 100%;
     background: #000;
     opacity: 0.6;
     z-index: 900;
